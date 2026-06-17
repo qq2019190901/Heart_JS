@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+:root {
+  font-family: 'PingFang SC', 'Microsoft YaHei', system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #0d5e28;
+  height: 100%;
+  height: 100dvh;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (min-width: 768px) {
+  html, body, #root {
+    height: 100vh;
+  }
+}
+
+::selection {
+  background: rgba(46, 204, 113, 0.3);
+}
+
+/* GPU-accelerated animations */
+@layer utilities {
+  .gpu-accelerated {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+  .card-snap {
+    transition: transform 0.15s ease-out;
+  }
+}
