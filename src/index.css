@@ -32,6 +32,18 @@ html, body, #root {
   background: rgba(46, 204, 113, 0.3);
 }
 
+/* Trick card entrance animation */
+@keyframes trickCardIn {
+  0% {
+    scale: 0;
+    opacity: 0;
+  }
+  100% {
+    scale: 1;
+    opacity: 1;
+  }
+}
+
 /* GPU-accelerated animations */
 @layer utilities {
   .gpu-accelerated {

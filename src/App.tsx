@@ -3,7 +3,7 @@ import { Menu } from './components/Menu/Menu';
 import { CardComponent } from './components/Card/Card';
 import { Table } from './components/Table/Table';
 import { ScoreBoard } from './components/ScoreBoard/ScoreBoard';
-import type { GameState, Card, Player } from './game/types';
+import type { GameState, Card, Player, PassDirection } from './game/types';
 import { createInitialState, dealCardsForRound, applyCardPass, playCard } from './game/hearts-game';
 import { getAiDecision } from './game/ai';
 import { heartsAreBroken, canPlayCard, getAllPlayableCards } from './game/rules';
@@ -278,6 +278,13 @@ function App() {
     if (!gameState) return;
     const nextRound = gameState.roundNumber + 1;
     const newState = createInitialState(gameState.players, nextRound);
+    // Preserve cumulative scores across rounds
+    const prevScores = gameState.scores;
+    const cumulativeScores: Record<string, number> = {};
+    for (const p of newState.players) {
+      cumulativeScores[p.id] = (prevScores[p.id] || 0);
+    }
+    newState.scores = cumulativeScores;
     setGameState(newState);
     setRoundOver(false);
     setGameOver(false);
@@ -286,9 +293,8 @@ function App() {
     setTimeout(() => {
       const dealt = dealCardsForRound(newState, newState.roundNumber);
       setGameState(dealt);
-      if (dealt.phase === 'passing' && mode === 'single') {
-        setGameState(applyCardPass(dealt));
-      } else if (dealt.phase === 'passing') {
+      // Always show passing UI for all modes
+      if (dealt.phase === 'passing') {
         setShowPassUI(true);
         setSelectedPassCardIds(new Set());
       }
@@ -332,9 +338,7 @@ function App() {
     setTimeout(() => {
       const dealt = dealCardsForRound(newState, newState.roundNumber);
       setGameState(dealt);
-      if (dealt.phase === 'passing' && mode === 'single') {
-        setGameState(applyCardPass(dealt));
-      } else if (dealt.phase === 'passing') {
+      if (dealt.phase === 'passing') {
         setShowPassUI(true);
         setSelectedPassCardIds(new Set());
       }
@@ -398,8 +402,8 @@ function App() {
       });
     };
 
-    const passDir = gameState.passedDirections[humanId] || 'none';
-    const passLabel = passDir === 'left' ? '← 左侧玩家' : passDir === 'right' ? '→ 右侧玩家' : '无';
+    const passDir: PassDirection = gameState.passedDirections[humanId] ?? 'none';
+    const passLabel = passDir === 'left' ? '← 左侧玩家' : passDir === 'right' ? '→ 右侧玩家' : passDir === 'across' ? '↑ 对面玩家' : '无';
     const selectedArr = humanHand.filter(c => selectedPassCardIds.has(c.id));
 
     return (
@@ -430,7 +434,11 @@ function App() {
           {selectedArr.length > 0 ? (
             <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
               {selectedArr.map((card) => (
-                <div key={card.id} className="relative">
+                <div
+                  key={card.id}
+                  className="relative cursor-pointer"
+                  onClick={() => togglePassCard(card.id)}
+                >
                   <CardComponent card={card} small />
                   <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold shadow-md">
                     ✕
@@ -492,23 +500,20 @@ function App() {
       background: 'linear-gradient(180deg, #0d5e28 0%, #094a20 100%)',
     }}>
       {/* Header bar */}
-      <div className="flex items-center justify-between px-3 py-1.5 bg-black/20 shrink-0">
+      <div className="flex items-center justify-between px-4 py-2 bg-black/20 shrink-0">
         <button
           className="text-white/60 text-sm hover:text-white transition-colors"
           onClick={() => setMode(null)}
         >
           ← 菜单
         </button>
-        <div className="text-white/50 text-xs font-medium">
+        <div className="text-white/70 text-sm font-medium">
           第 {gameState.roundNumber} 回合
         </div>
       </div>
 
-      {/* Table area - fills available space between header and hand */}
-      <div className="flex-1 flex items-center justify-center px-2 sm:px-4 min-h-0 overflow-hidden"
-        style={{
-          height: '0',
-        }}>
+      {/* Table area — fills all available space */}
+      <div className="flex-1 flex items-center justify-center p-2 sm:p-4 min-h-0 overflow-hidden">
         <Table
           trick={gameState.currentTrick}
           currentPlayerId={gameState.currentPlayerId}
@@ -517,63 +522,64 @@ function App() {
             id: p.id,
             name: p.name,
             score: gameState.scores[p.id] ?? 0,
+            isAi: !!p.isAi,
           }))}
+          aiHands={gameState.hands}
         />
       </div>
 
-      {/* Bottom bar: turn indicator + hand, always visible at bottom */}
-      <div className="shrink-0 flex flex-col items-center px-2"
-        style={{
-          height: isMobile ? '180px' : '220px',
-        }}>
+      {/* Bottom bar: turn indicator + hand */}
+      <div className="shrink-0 flex flex-col items-center px-2 sm:px-4 pb-3 pt-2">
         {/* Turn indicator */}
-        <div className="h-5 flex items-center justify-center shrink-0 w-full">
+        <div className="h-6 flex items-center justify-center shrink-0 w-full mb-1">
           {gameState.currentPlayerId === humanId && !waitingForAi && (
-            <div className="text-green-300 text-xs sm:text-sm animate-pulse font-medium">
+            <div className="text-green-300 text-sm animate-pulse font-semibold">
               轮到你了！
             </div>
           )}
           {waitingForAi && (
-            <div className="text-white/50 text-xs">AI 思考中...</div>
+            <div className="text-white/50 text-sm">AI 思考中...</div>
+          )}
+          {!waitingForAi && gameState.currentPlayerId !== humanId && (
+            <div className="text-white/40 text-sm">
+              {gameState.players.find(p => p.id === gameState.currentPlayerId)?.name || ''} 的回合
+            </div>
           )}
         </div>
 
         {/* Human hand */}
-        <div className="flex-1 w-full flex justify-center items-end overflow-hidden">
-          <div className="flex items-end justify-center flex-wrap gap-0.5 sm:gap-1.5 px-1 sm:px-2">
-            {humanHand.map((card) => {
-              const playable = playableIds.has(card.id);
-              const isCurrentPlayer = gameState.currentPlayerId === humanId;
-              const cardWidth = isMobile ? 40 : 56;
-              const overlapPercent = humanHand.length > 10 ? 0.35 : humanHand.length > 7 ? 0.25 : 0.15;
-              const overlapOffset = Math.round(-cardWidth * overlapPercent);
-              return (
-                <div
-                  key={card.id}
-                  style={{
-                    marginLeft: humanHand.indexOf(card) > 0 ? overlapOffset : 0,
-                    transition: 'transform 0.15s ease-out',
-                  }}
-                >
-                  <CardComponent
-                    card={card}
-                    onClick={() => {
-                      if (isCurrentPlayer && playable) {
-                        if (mode === 'multi') {
-                          wsManager.playCard(card.id);
-                        } else {
-                          handleCardClick(card);
-                        }
+        <div className="flex items-center justify-center flex-wrap gap-1 px-1 sm:px-2"
+          style={{ maxHeight: isMobile ? '160px' : '200px' }}>
+          {humanHand.map((card) => {
+            const playable = playableIds.has(card.id);
+            const isCurrentPlayer = gameState.currentPlayerId === humanId;
+            return (
+              <div
+                key={card.id}
+                className="transition-transform duration-150"
+                style={{
+                  marginLeft: isMobile ? '-12px' : undefined,
+                  transform: !playable && isCurrentPlayer ? 'scale(0.92) brightness(0.7)' : undefined,
+                }}
+              >
+                <CardComponent
+                  card={card}
+                  onClick={() => {
+                    if (isCurrentPlayer && playable) {
+                      if (mode === 'multi') {
+                        wsManager.playCard(card.id);
+                      } else {
+                        handleCardClick(card);
                       }
-                    }}
-                    disabled={!isCurrentPlayer || !playable || waitingForAi}
-                    animate={false}
-                    small={isMobile}
-                  />
-                </div>
-              );
-            })}
-          </div>
+                    }
+                  }}
+                  disabled={!isCurrentPlayer || waitingForAi || (!playable && isCurrentPlayer)}
+                  animate={false}
+                  small={isMobile}
+                />
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

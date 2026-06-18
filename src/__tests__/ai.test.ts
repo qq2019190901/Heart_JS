@@ -2,17 +2,17 @@ import { describe, it, expect } from 'vitest';
 import { getAiDecision } from '../game/ai';
 import { createDeck, dealCards } from '../game/deck';
 import { createInitialState, startRound } from '../game/hearts-game';
-import type { Card, TrickState } from '../game/types';
+import type { Card, TrickState, Suit, Rank, Player } from '../game/types';
 
-function card(suit: string, rank: number): Card {
+function card(suit: Suit, rank: Rank): Card {
   return { suit, rank, id: `${suit}-${rank}` };
 }
 
 describe('AI decision', () => {
   it('returns a card for easy difficulty', () => {
-    const players = [
+    const players: Player[] = [
       { id: 'p0', name: 'P1', isHuman: true, score: 0 },
-      { id: 'p1', name: 'P2', isHuman: false, difficulty: 'easy', score: 0 },
+      { id: 'p1', name: 'P2', isHuman: false, difficulty: 'easy' as const, score: 0 },
       { id: 'p2', name: 'P3', isHuman: true, score: 0 },
       { id: 'p3', name: 'P4', isHuman: true, score: 0 },
     ];
@@ -25,9 +25,9 @@ describe('AI decision', () => {
   });
 
   it('returns a card for medium difficulty', () => {
-    const players = [
+    const players: Player[] = [
       { id: 'p0', name: 'P1', isHuman: true, score: 0 },
-      { id: 'p1', name: 'P2', isHuman: false, difficulty: 'medium', score: 0 },
+      { id: 'p1', name: 'P2', isHuman: false, difficulty: 'medium' as const, score: 0 },
       { id: 'p2', name: 'P3', isHuman: true, score: 0 },
       { id: 'p3', name: 'P4', isHuman: true, score: 0 },
     ];
@@ -39,9 +39,9 @@ describe('AI decision', () => {
   });
 
   it('returns a card for hard difficulty', () => {
-    const players = [
+    const players: Player[] = [
       { id: 'p0', name: 'P1', isHuman: true, score: 0 },
-      { id: 'p1', name: 'P2', isHuman: false, difficulty: 'hard', score: 0 },
+      { id: 'p1', name: 'P2', isHuman: false, difficulty: 'hard' as const, score: 0 },
       { id: 'p2', name: 'P3', isHuman: true, score: 0 },
       { id: 'p3', name: 'P4', isHuman: true, score: 0 },
     ];

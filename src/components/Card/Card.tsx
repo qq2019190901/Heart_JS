@@ -13,17 +13,24 @@ interface CardComponentProps {
 }
 
 const SUIT_ICONS: Record<string, string> = {
-  hearts: '\u2665',
-  diamonds: '\u2666',
-  clubs: '\u2663',
-  spades: '\u2660',
+  hearts: '♥',
+  diamonds: '♦',
+  clubs: '♣',
+  spades: '♠',
 };
 
 const SUIT_COLORS: Record<string, string> = {
-  hearts: '#e74c3c',
-  diamonds: '#e67e22',
-  clubs: '#2c3e50',
-  spades: '#1a1a2e',
+  hearts: '#C62828',
+  diamonds: '#C62828',
+  clubs: '#1A1A1A',
+  spades: '#1A1A1A',
+};
+
+// Face card center symbols
+const FACE_SYMBOLS: Record<number, string> = {
+  11: '♘',
+  12: '♕',
+  13: '♔',
 };
 
 const CardComponent: React.FC<CardComponentProps> = memo(({
@@ -36,20 +43,24 @@ const CardComponent: React.FC<CardComponentProps> = memo(({
   animate = true,
 }) => {
   const [hovered, setHovered] = useState(false);
-  const isRed = card.suit === 'hearts' || card.suit === 'diamonds';
   const icon = SUIT_ICONS[card.suit];
   const color = SUIT_COLORS[card.suit];
   const rankDisplay = getRankDisplay(card.rank);
 
   const w = small ? 'w-10 sm:w-14 md:w-16' : 'w-14 sm:w-18 md:w-20';
   const h = small ? 'h-14 sm:h-20 md:h-24' : 'h-20 sm:h-28 md:h-32';
-  const fontSize = small ? 'text-[10px]' : 'text-xs';
+
+  // Standard playing card pip layout
+  // Each card: left column, right column, and optional middle column
+  // Positions are percentages within the center area (bounded away from corners)
+  const pipLayout = getPipLayout(card.rank);
+  const pipSize = getPipSize(card.rank, small);
 
   return (
     <motion.div
       className={`${w} ${h} rounded-lg cursor-pointer select-none relative flex-shrink-0 ${
         selected ? 'ring-2 ring-green-400 ring-offset-2 ring-offset-emerald-800' : ''
-      } ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
+      } ${disabled ? 'cursor-not-allowed' : ''}`}
       style={{
         backgroundColor: faceDown ? '#1a5276' : 'white',
         boxShadow: selected
@@ -79,17 +90,44 @@ const CardComponent: React.FC<CardComponentProps> = memo(({
         </div>
       ) : (
         <>
-          <div className="absolute top-0.5 left-1 md:top-1 md:left-1.5 flex flex-col items-center">
-            <span className="font-bold leading-none" style={{ color, fontSize: small ? '10px' : '12px' }}>{rankDisplay}</span>
-            <span className="leading-none" style={{ color, fontSize: small ? '7px' : '9px' }}>{icon}</span>
+          {/* Top-left corner */}
+          <div className="absolute top-[3%] left-[5%] flex flex-col items-center">
+            <span className="font-bold leading-none" style={{ color, fontSize: small ? '9px' : '11px' }}>{rankDisplay}</span>
+            <span className="leading-none" style={{ color, fontSize: small ? '6px' : '8px' }}>{icon}</span>
           </div>
-          <div className="w-full h-full flex items-center justify-center">
-            <span style={{ color, fontSize: small ? '16px' : undefined }}>{icon}</span>
+
+          {/* Center pips — standard playing card layout */}
+          <div className="absolute inset-[14%]" style={{ top: '12%', bottom: '12%' }}>
+            {pipLayout.map((pos, i) => {
+              // Use face symbol for J/Q/K
+              const displayChar = (card.rank >= 11 && card.rank <= 13)
+                ? FACE_SYMBOLS[card.rank]
+                : icon;
+              return (
+                <span
+                  key={i}
+                  className="absolute"
+                  style={{
+                    color,
+                    fontSize: pipSize,
+                    left: `${pos.x}%`,
+                    top: `${pos.y}%`,
+                    transform: 'translate(-50%, -50%)',
+                  }}
+                >
+                  {displayChar}
+                </span>
+              );
+            })}
           </div>
-          <div className="absolute bottom-0.5 right-1 md:bottom-1 md:right-1.5 flex flex-col items-center rotate-180">
-            <span className="font-bold leading-none" style={{ color, fontSize: small ? '10px' : '12px' }}>{rankDisplay}</span>
-            <span className="leading-none" style={{ color, fontSize: small ? '7px' : '9px' }}>{icon}</span>
+
+          {/* Bottom-right corner (rotated) */}
+          <div className="absolute bottom-[3%] right-[5%] flex flex-col items-center rotate-180">
+            <span className="font-bold leading-none" style={{ color, fontSize: small ? '9px' : '11px' }}>{rankDisplay}</span>
+            <span className="leading-none" style={{ color, fontSize: small ? '6px' : '8px' }}>{icon}</span>
           </div>
+
+          {/* Hover gloss */}
           {hovered && (
             <div
               className="absolute inset-0 rounded-lg pointer-events-none"
@@ -105,6 +143,123 @@ const CardComponent: React.FC<CardComponentProps> = memo(({
 });
 
 CardComponent.displayName = 'CardComponent';
+
+// Standard playing card pip layout
+// Returns array of {x, y} percentage positions within the center area
+function getPipLayout(rank: number): { x: number; y: number }[] {
+  switch (rank) {
+    case 2:
+      return [
+        { x: 25, y: 25 },
+        { x: 75, y: 75 },
+      ];
+    case 3:
+      return [
+        { x: 50, y: 22 },
+        { x: 50, y: 50 },
+        { x: 50, y: 78 },
+      ];
+    case 4:
+      return [
+        { x: 25, y: 25 },
+        { x: 75, y: 25 },
+        { x: 25, y: 75 },
+        { x: 75, y: 75 },
+      ];
+    case 5:
+      return [
+        { x: 25, y: 25 },
+        { x: 75, y: 25 },
+        { x: 50, y: 50 },
+        { x: 25, y: 75 },
+        { x: 75, y: 75 },
+      ];
+    case 6:
+      return [
+        { x: 25, y: 20 },
+        { x: 75, y: 20 },
+        { x: 25, y: 50 },
+        { x: 75, y: 50 },
+        { x: 25, y: 80 },
+        { x: 75, y: 80 },
+      ];
+    case 7:
+      return [
+        { x: 25, y: 18 },
+        { x: 75, y: 18 },
+        { x: 50, y: 35 },
+        { x: 25, y: 55 },
+        { x: 75, y: 55 },
+        { x: 25, y: 82 },
+        { x: 75, y: 82 },
+      ];
+    case 8:
+      return [
+        { x: 25, y: 15 },
+        { x: 75, y: 15 },
+        { x: 50, y: 30 },
+        { x: 25, y: 50 },
+        { x: 75, y: 50 },
+        { x: 50, y: 70 },
+        { x: 25, y: 85 },
+        { x: 75, y: 85 },
+      ];
+    case 9:
+      return [
+        { x: 25, y: 14 },
+        { x: 75, y: 14 },
+        { x: 50, y: 26 },
+        { x: 25, y: 44 },
+        { x: 75, y: 44 },
+        { x: 50, y: 56 },
+        { x: 25, y: 74 },
+        { x: 75, y: 74 },
+        { x: 50, y: 86 },
+      ];
+    case 10:
+      return [
+        { x: 25, y: 12 },
+        { x: 75, y: 12 },
+        { x: 50, y: 22 },
+        { x: 25, y: 36 },
+        { x: 75, y: 36 },
+        { x: 50, y: 50 },
+        { x: 25, y: 64 },
+        { x: 75, y: 64 },
+        { x: 50, y: 78 },
+        { x: 25, y: 90 },
+        { x: 75, y: 90 },
+      ];
+    case 11: // J
+    case 12: // Q
+    case 13: // K
+      return [{ x: 50, y: 50 }];
+    case 14: // A
+      return [{ x: 50, y: 50 }];
+    default:
+      return [{ x: 50, y: 50 }];
+  }
+}
+
+// Pip size based on rank and card size — smaller to leave clear gaps
+function getPipSize(rank: number, small: boolean): string {
+  if (small) {
+    if (rank === 14) return '14px';
+    if (rank >= 11 && rank <= 13) return '28px';
+    if (rank <= 4) return '12px';
+    if (rank <= 7) return '9px';
+    return '7px';
+  }
+  // Normal size — leave clear gaps between pips
+  if (rank === 14) return '40px';
+  if (rank === 12) return '32px';
+  if (rank >= 11 && rank <= 13) return '35px';
+  if (rank <= 4) return '32px';
+  if (rank <= 6) return '26px';
+  if (rank <= 8) return '20px';
+  if (rank <= 9) return '16px';
+  return '13px';
+}
 
 function getRankDisplay(rank: number): string {
   switch (rank) {

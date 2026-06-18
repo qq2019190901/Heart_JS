@@ -43,7 +43,8 @@ export function dealCardsForRound(state: GameState, roundNumber: number): GameSt
   newState.trickCardsWon = {};
 
   // Determine pass direction and cards to pass
-  const passCycle = ['left', 'none', 'right', 'none'] as PassDirection[];
+  // Standard Hearts passing cycle: L, Across, R, None, repeat
+  const passCycle = ['left', 'across', 'right', 'none'] as PassDirection[];
   const passDir = passCycle[(roundNumber - 1) % 4];
   newState.passedDirections = {};
   newState.passedCards = {};
@@ -88,9 +89,14 @@ export function applyCardPass(state: GameState): GameState {
     if (passDir === 'left') {
       // Player j passes to (j+1), so we receive from (i-1)
       receiveFromIdx = (i - 1 + newState.players.length) % newState.players.length;
-    } else {
+    } else if (passDir === 'right') {
       // Player j passes to (j-1), so we receive from (i+1)
       receiveFromIdx = (i + 1) % newState.players.length;
+    } else if (passDir === 'across') {
+      // Player j passes to opposite (j+2 mod 4), so we receive from (i-2 mod 4)
+      receiveFromIdx = (i - 2 + newState.players.length) % newState.players.length;
+    } else {
+      receiveFromIdx = i; // shouldn't happen since passDir==='none' returns early
     }
     const received = newState.passedCards[newState.players[receiveFromIdx].id] || [];
     updatedHand = [...updatedHand, ...received];
@@ -138,7 +144,7 @@ function passCards(hand: Card[], direction: PassDirection): Card[] {
       cardsToPass.push(...suitCards.slice(0, toTake));
       if (cardsToPass.length >= count) break;
     }
-  } else {
+  } else if (direction === 'left' || direction === 'across') {
     // Pass highest-ranked safe cards (excluding hearts and Q of Spades)
     const suitCards: Card[] = [...hand]
       .filter(c => c.suit !== 'hearts' && !(c.suit === 'spades' && c.rank === 12))

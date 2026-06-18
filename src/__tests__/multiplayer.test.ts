@@ -3,9 +3,9 @@ import { createDeck, dealCards } from '../game/deck';
 import { createInitialState, startRound, playCard } from '../game/hearts-game';
 import { heartsAreBroken, canPlayCard } from '../game/rules';
 import { isShotGunTheRose } from '../game/rules';
-import type { Card, Player } from '../game/types';
+import type { Card, Player, Suit, Rank } from '../game/types';
 
-function card(suit: string, rank: number): Card {
+function card(suit: Suit, rank: Rank): Card {
   return { suit, rank, id: `${suit}-${rank}` };
 }
 
@@ -87,7 +87,7 @@ describe('Shot Gun The Rose', () => {
   it('works with Map input', () => {
     const hands = new Map<string, Card[]>();
     const allCards: Card[] = [];
-    for (let r = 2; r <= 14; r++) allCards.push(card('hearts', r));
+    for (let r = 2; r <= 14; r++) allCards.push(card('hearts', r as Rank));
     allCards.push(card('spades', 12));
     hands.set('p0', allCards);
     hands.set('p1', [card('spades', 2)]);

@@ -2,10 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { createDeck, dealCards } from '../game/deck';
 import { canPlayCard, heartsAreBroken, trickWinner, getAllPlayableCards } from '../game/rules';
 import { createInitialState, startRound, playCard } from '../game/hearts-game';
-import type { Card, GameState, TrickState } from '../game/types';
+import type { Card, GameState, TrickState, Suit, Rank } from '../game/types';
 
 // ===== Helper: create a card =====
-function card(suit: string, rank: number): Card {
+function card(suit: Suit, rank: Rank): Card {
   return { suit, rank, id: `${suit}-${rank}` };
 }
 

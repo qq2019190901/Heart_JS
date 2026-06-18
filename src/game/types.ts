@@ -41,7 +41,7 @@ export interface GameState {
   phase: GamePhase;
   currentPlayerId: string;
   leadSuit: Suit | null;
-  passedDirections: Record<string, 'left' | 'right' | 'none'>;
+  passedDirections: Record<string, 'left' | 'right' | 'across' | 'none'>;
   passedCards: Record<string, Card[]>;
   scores: Record<string, number>;
   roundNumber: number;
@@ -51,7 +51,7 @@ export interface GameState {
   trickJustCompleted: boolean; // True for one tick after trick completes, to show all 4 cards
 }
 
-export type PassDirection = 'left' | 'right' | 'none';
+export type PassDirection = 'left' | 'right' | 'across' | 'none';
 
 // ===== Multiplayer Protocol =====
 
