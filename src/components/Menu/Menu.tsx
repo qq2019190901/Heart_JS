@@ -1,14 +1,45 @@
 import React, { useState, memo } from 'react';
 import { motion } from 'framer-motion';
+import { LanPeerManager } from '../../network/lan-peer';
 
 interface MenuProps {
   onStartSingle: () => void;
-  onStartMulti: () => void;
+  onStartLanHost: (roomId: string) => void;
+  onStartLanJoin: (roomCode: string) => void;
   onStartLocal: () => void;
 }
 
-const Menu: React.FC<MenuProps> = memo(({ onStartSingle, onStartMulti, onStartLocal }) => {
+const Menu: React.FC<MenuProps> = memo(({
+  onStartSingle,
+  onStartLanHost,
+  onStartLanJoin,
+  onStartLocal,
+}) => {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showLanPanel, setShowLanPanel] = useState(false);
+
+  // Server config
+  const [serverHost, setServerHost] = useState('127.0.0.1');
+  const [serverPort, setServerPort] = useState('9000');
+
+  // Create room
+  const [createRoomCode, setCreateRoomCode] = useState('');
+
+  // Join room (LAN)
+  const [joinRoomCode, setJoinRoomCode] = useState('6666');
+
+  // Join room (Online)
+
+  const handleJoin = () => {
+    if (joinRoomCode.trim().length >= 3) {
+      onStartLanJoin(joinRoomCode.trim().toUpperCase());
+    }
+  };
+
+  const handleCreate = () => {
+    const code = createRoomCode.trim().toUpperCase() || LanPeerManager.generateRoomCode();
+    onStartLanHost(code);
+  };
 
   return (
     <div className="min-h-screen min-h-dvh flex flex-col items-center justify-center relative overflow-hidden"
@@ -37,7 +68,7 @@ const Menu: React.FC<MenuProps> = memo(({ onStartSingle, onStartMulti, onStartLo
             delay: i * 0.3,
           }}
         >
-          {['\u2665', '\u2666', '\u2663', '\u2660', '\u2665', '\u2666'][i]}
+          {['♥', '♦', '♣', '♠', '♥', '♦'][i]}
         </motion.div>
       ))}
 
@@ -46,7 +77,7 @@ const Menu: React.FC<MenuProps> = memo(({ onStartSingle, onStartMulti, onStartLo
         initial={{ y: -30, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, type: 'spring' }}
-        className="text-center mb-8 sm:mb-12 z-10 px-4"
+        className="text-center mb-6 sm:mb-8 z-10 px-4"
       >
         <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold text-white tracking-wide"
           style={{ textShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
@@ -56,15 +87,120 @@ const Menu: React.FC<MenuProps> = memo(({ onStartSingle, onStartMulti, onStartLo
       </motion.div>
 
       {/* Buttons */}
-      <div className="flex flex-col gap-3 w-56 sm:w-64 z-10 px-4">
+      <div className="flex flex-col gap-3 w-52 sm:w-64 z-10 px-4">
         <MenuButton label="单人游戏" sub="与AI对战" onClick={onStartSingle} delay={0.2} />
-        <MenuButton label="局域网联机" sub="本地多人对战" onClick={onStartLocal} delay={0.4} />
-        <MenuButton label="在线联机" sub="WebSocket联机" onClick={onStartMulti} delay={0.6} />
+        <MenuButton label="局域网联机" sub="" onClick={() => setShowLanPanel(!showLanPanel)} delay={0.4} />
       </div>
+
+      {/* LAN Panel */}
+      {showLanPanel && (
+        <motion.div
+          className="z-20 mt-4 w-72 sm:w-80 rounded-xl p-4"
+          style={{
+            background: 'rgba(0,0,0,0.4)',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255,255,255,0.15)',
+          }}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+        >
+          <h3 className="text-white font-bold text-center mb-3 text-base">局域网联机</h3>
+
+          {/* Server Config */}
+          <div className="mb-3">
+            <label className="text-white/60 text-xs block mb-1.5 text-center">PeerJS 服务器</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={serverHost}
+                onChange={(e) => setServerHost(e.target.value)}
+                placeholder="IP 地址"
+                className="flex-1 px-3 py-2 rounded-lg text-white text-sm text-center font-mono"
+                style={{
+                  background: 'rgba(255,255,255,0.1)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  outline: 'none',
+                }}
+              />
+              <input
+                type="text"
+                value={serverPort}
+                onChange={(e) => setServerPort(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                placeholder="端口"
+                className="w-20 px-3 py-2 rounded-lg text-white text-sm text-center font-mono"
+                style={{
+                  background: 'rgba(255,255,255,0.1)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  outline: 'none',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Create Room */}
+          <div className="mb-3">
+            <label className="text-white/60 text-xs block mb-1.5 text-center">创建房间</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={createRoomCode}
+                onChange={(e) => setCreateRoomCode(e.target.value.toUpperCase().slice(0, 12))}
+                placeholder="房间号（留空自动生成）"
+                className="flex-1 px-3 py-2 rounded-lg text-white text-sm text-center tracking-widest font-mono"
+                style={{
+                  background: 'rgba(255,255,255,0.1)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  outline: 'none',
+                }}
+                maxLength={12}
+              />
+              <button
+                className="px-4 py-2 rounded-lg text-white font-semibold text-sm transition-all"
+                style={{
+                  background: 'linear-gradient(135deg, #2ecc71, #27ae60)',
+                  boxShadow: '0 2px 10px rgba(46,204,113,0.3)',
+                }}
+                onClick={handleCreate}
+              >
+                创建
+              </button>
+            </div>
+          </div>
+
+          {/* Join Room */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={joinRoomCode}
+              onChange={(e) => setJoinRoomCode(e.target.value.toUpperCase().slice(0, 12))}
+              placeholder="房间号"
+              className="flex-1 px-3 py-2 rounded-lg text-white text-sm text-center tracking-widest font-mono"
+              style={{
+                background: 'rgba(255,255,255,0.1)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                outline: 'none',
+              }}
+              maxLength={12}
+            />
+            <button
+              className="px-4 py-2 rounded-lg text-white font-semibold text-sm transition-all"
+              style={{
+                background: 'linear-gradient(135deg, #3498db, #2980b9)',
+                boxShadow: '0 2px 10px rgba(52,152,219,0.3)',
+              }}
+              onClick={handleJoin}
+              disabled={joinRoomCode.length < 3}
+            >
+              加入
+            </button>
+          </div>
+        </motion.div>
+      )}
 
       {/* Rules toggle */}
       <motion.button
-        className="mt-6 sm:mt-12 text-white/40 text-xs sm:text-sm hover:text-white/70 transition-colors z-10"
+        className="mt-4 sm:mt-6 text-white/40 text-xs sm:text-sm hover:text-white/70 transition-colors z-10"
         onClick={() => setMenuOpen(!menuOpen)}
         whileHover={{ scale: 1.05 }}
       >
@@ -121,7 +257,7 @@ const MenuButton: React.FC<MenuButtonProps> = memo(({ label, sub, onClick, delay
     whileTap={{ scale: 0.97 }}
   >
     <div>{label}</div>
-    <div className="text-[10px] sm:text-xs text-white/40 font-normal">{sub}</div>
+    {sub && <div className="text-[10px] sm:text-xs text-white/40 font-normal">{sub}</div>}
   </motion.button>
 ));
 

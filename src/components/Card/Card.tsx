@@ -1,5 +1,4 @@
 import React, { useState, memo } from 'react';
-import { motion } from 'framer-motion';
 import type { Card as CardType } from '../../game/types';
 
 interface CardComponentProps {
@@ -13,10 +12,10 @@ interface CardComponentProps {
 }
 
 const SUIT_ICONS: Record<string, string> = {
-  hearts: '♥',
-  diamonds: '♦',
-  clubs: '♣',
-  spades: '♠',
+  hearts: '\u2665',
+  diamonds: '\u2666',
+  clubs: '\u2663',
+  spades: '\u2660',
 };
 
 const SUIT_COLORS: Record<string, string> = {
@@ -28,9 +27,9 @@ const SUIT_COLORS: Record<string, string> = {
 
 // Face card center symbols
 const FACE_SYMBOLS: Record<number, string> = {
-  11: '♘',
-  12: '♕',
-  13: '♔',
+  11: '\u2658',
+  12: '\u2655',
+  13: '\u2654',
 };
 
 const CardComponent: React.FC<CardComponentProps> = memo(({
@@ -51,41 +50,48 @@ const CardComponent: React.FC<CardComponentProps> = memo(({
   const h = small ? 'h-14 sm:h-20 md:h-24' : 'h-20 sm:h-28 md:h-32';
 
   // Standard playing card pip layout
-  // Each card: left column, right column, and optional middle column
-  // Positions are percentages within the center area (bounded away from corners)
   const pipLayout = getPipLayout(card.rank);
   const pipSize = getPipSize(card.rank, small);
 
+  // Pre-computed classes to avoid runtime string concat
+  const classes = [
+    w,
+    h,
+    'rounded-lg cursor-pointer select-none relative flex-shrink-0',
+    selected ? 'ring-2 ring-green-400 ring-offset-2 ring-offset-emerald-800' : '',
+    disabled ? 'cursor-not-allowed' : '',
+  ].filter(Boolean).join(' ');
+
+  // Pre-computed box-shadow values
+  let boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
+  if (selected) boxShadow = '0 8px 25px rgba(46,204,113,0.4)';
+  else if (hovered && !disabled) boxShadow = '0 6px 20px rgba(0,0,0,0.3)';
+
   return (
-    <motion.div
-      className={`${w} ${h} rounded-lg cursor-pointer select-none relative flex-shrink-0 ${
-        selected ? 'ring-2 ring-green-400 ring-offset-2 ring-offset-emerald-800' : ''
-      } ${disabled ? 'cursor-not-allowed' : ''}`}
+    <div
+      className={classes}
       style={{
         backgroundColor: faceDown ? '#1a5276' : 'white',
-        boxShadow: selected
-          ? '0 8px 25px rgba(46,204,113,0.4)'
-          : hovered && !disabled
-            ? '0 6px 20px rgba(0,0,0,0.3)'
-            : '0 2px 8px rgba(0,0,0,0.2)',
-        willChange: 'transform',
-        transformStyle: 'preserve-3d',
+        boxShadow,
+        transform: hovered && !disabled && !faceDown ? 'translateY(-8px) scale(1.05)' : undefined,
+        transition: 'transform 0.15s ease-out, box-shadow 0.15s ease-out',
+        willChange: hovered ? 'transform' : undefined,
+        WebkitBackfaceVisibility: 'hidden',
+        backfaceVisibility: 'hidden',
       }}
-      initial={animate ? { scale: 0.8, opacity: 0, rotateY: 90 } : undefined}
-      animate={animate ? { scale: 1, opacity: 1, rotateY: 0 } : undefined}
-      whileHover={hovered && !disabled && !faceDown ? { scale: 1.08, y: -12, zIndex: 10 } : undefined}
-      whileTap={!disabled ? { scale: 0.95 } : undefined}
       onClick={!disabled ? onClick : undefined}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
       {faceDown ? (
-        <div className="w-full h-full rounded-lg flex items-center justify-center"
+        <div
+          className="w-full h-full rounded-lg flex items-center justify-center"
           style={{
             background: 'linear-gradient(135deg, #1a5276 0%, #2e86c1 50%, #1a5276 100%)',
-          }}>
+          }}
+        >
           <div className="w-8 h-10 rounded border border-white/20 flex items-center justify-center">
-            <span className="text-white/40 text-lg">♥</span>
+            <span className="text-white/40 text-lg">\u2665</span>
           </div>
         </div>
       ) : (
@@ -96,10 +102,9 @@ const CardComponent: React.FC<CardComponentProps> = memo(({
             <span className="leading-none" style={{ color, fontSize: small ? '6px' : '8px' }}>{icon}</span>
           </div>
 
-          {/* Center pips — standard playing card layout */}
-          <div className="absolute inset-[14%]" style={{ top: '12%', bottom: '12%' }}>
+          {/* Center pips */}
+          <div className="absolute" style={{ top: '12%', bottom: '12%', left: '14%', right: '14%' }}>
             {pipLayout.map((pos, i) => {
-              // Use face symbol for J/Q/K
               const displayChar = (card.rank >= 11 && card.rank <= 13)
                 ? FACE_SYMBOLS[card.rank]
                 : icon;
@@ -138,102 +143,36 @@ const CardComponent: React.FC<CardComponentProps> = memo(({
           )}
         </>
       )}
-    </motion.div>
+    </div>
   );
 });
 
 CardComponent.displayName = 'CardComponent';
 
 // Standard playing card pip layout
-// Returns array of {x, y} percentage positions within the center area
 function getPipLayout(rank: number): { x: number; y: number }[] {
   switch (rank) {
     case 2:
-      return [
-        { x: 25, y: 25 },
-        { x: 75, y: 75 },
-      ];
+      return [{ x: 25, y: 25 }, { x: 75, y: 75 }];
     case 3:
-      return [
-        { x: 50, y: 22 },
-        { x: 50, y: 50 },
-        { x: 50, y: 78 },
-      ];
+      return [{ x: 50, y: 22 }, { x: 50, y: 50 }, { x: 50, y: 78 }];
     case 4:
-      return [
-        { x: 25, y: 25 },
-        { x: 75, y: 25 },
-        { x: 25, y: 75 },
-        { x: 75, y: 75 },
-      ];
+      return [{ x: 25, y: 25 }, { x: 75, y: 25 }, { x: 25, y: 75 }, { x: 75, y: 75 }];
     case 5:
-      return [
-        { x: 25, y: 25 },
-        { x: 75, y: 25 },
-        { x: 50, y: 50 },
-        { x: 25, y: 75 },
-        { x: 75, y: 75 },
-      ];
+      return [{ x: 25, y: 25 }, { x: 75, y: 25 }, { x: 50, y: 50 }, { x: 25, y: 75 }, { x: 75, y: 75 }];
     case 6:
-      return [
-        { x: 25, y: 20 },
-        { x: 75, y: 20 },
-        { x: 25, y: 50 },
-        { x: 75, y: 50 },
-        { x: 25, y: 80 },
-        { x: 75, y: 80 },
-      ];
+      return [{ x: 25, y: 20 }, { x: 75, y: 20 }, { x: 25, y: 50 }, { x: 75, y: 50 }, { x: 25, y: 80 }, { x: 75, y: 80 }];
     case 7:
-      return [
-        { x: 25, y: 18 },
-        { x: 75, y: 18 },
-        { x: 50, y: 35 },
-        { x: 25, y: 55 },
-        { x: 75, y: 55 },
-        { x: 25, y: 82 },
-        { x: 75, y: 82 },
-      ];
+      return [{ x: 25, y: 18 }, { x: 75, y: 18 }, { x: 50, y: 35 }, { x: 25, y: 55 }, { x: 75, y: 55 }, { x: 25, y: 82 }, { x: 75, y: 82 }];
     case 8:
-      return [
-        { x: 25, y: 15 },
-        { x: 75, y: 15 },
-        { x: 50, y: 30 },
-        { x: 25, y: 50 },
-        { x: 75, y: 50 },
-        { x: 50, y: 70 },
-        { x: 25, y: 85 },
-        { x: 75, y: 85 },
-      ];
+      return [{ x: 25, y: 15 }, { x: 75, y: 15 }, { x: 50, y: 30 }, { x: 25, y: 50 }, { x: 75, y: 50 }, { x: 50, y: 70 }, { x: 25, y: 85 }, { x: 75, y: 85 }];
     case 9:
-      return [
-        { x: 25, y: 14 },
-        { x: 75, y: 14 },
-        { x: 50, y: 26 },
-        { x: 25, y: 44 },
-        { x: 75, y: 44 },
-        { x: 50, y: 56 },
-        { x: 25, y: 74 },
-        { x: 75, y: 74 },
-        { x: 50, y: 86 },
-      ];
+      return [{ x: 25, y: 14 }, { x: 75, y: 14 }, { x: 50, y: 26 }, { x: 25, y: 44 }, { x: 75, y: 44 }, { x: 50, y: 56 }, { x: 25, y: 74 }, { x: 75, y: 74 }, { x: 50, y: 86 }];
     case 10:
-      return [
-        { x: 25, y: 12 },
-        { x: 75, y: 12 },
-        { x: 50, y: 22 },
-        { x: 25, y: 36 },
-        { x: 75, y: 36 },
-        { x: 50, y: 50 },
-        { x: 25, y: 64 },
-        { x: 75, y: 64 },
-        { x: 50, y: 78 },
-        { x: 25, y: 90 },
-        { x: 75, y: 90 },
-      ];
+      return [{ x: 25, y: 12 }, { x: 75, y: 12 }, { x: 50, y: 22 }, { x: 25, y: 36 }, { x: 75, y: 36 }, { x: 50, y: 50 }, { x: 25, y: 64 }, { x: 75, y: 64 }, { x: 50, y: 78 }, { x: 25, y: 90 }, { x: 75, y: 90 }];
     case 11: // J
     case 12: // Q
     case 13: // K
-      return [{ x: 50, y: 50 }];
     case 14: // A
       return [{ x: 50, y: 50 }];
     default:
@@ -241,7 +180,7 @@ function getPipLayout(rank: number): { x: number; y: number }[] {
   }
 }
 
-// Pip size based on rank and card size — smaller to leave clear gaps
+// Pip size based on rank and card size
 function getPipSize(rank: number, small: boolean): string {
   if (small) {
     if (rank === 14) return '14px';
@@ -250,7 +189,6 @@ function getPipSize(rank: number, small: boolean): string {
     if (rank <= 7) return '9px';
     return '7px';
   }
-  // Normal size — leave clear gaps between pips
   if (rank === 14) return '40px';
   if (rank === 12) return '32px';
   if (rank >= 11 && rank <= 13) return '35px';

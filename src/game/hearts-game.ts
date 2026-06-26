@@ -44,8 +44,8 @@ export function dealCardsForRound(state: GameState, roundNumber: number): GameSt
 
   // Determine pass direction and cards to pass
   // Standard Hearts passing cycle: L, Across, R, None, repeat
-  const passCycle = ['left', 'across', 'right', 'none'] as PassDirection[];
-  const passDir = passCycle[(roundNumber - 1) % 4];
+  const passCycle = ['left', 'across', 'right', 'none'] as const;
+  const passDir = passCycle[(roundNumber - 1) % 4] as PassDirection;
   newState.passedDirections = {};
   newState.passedCards = {};
 
@@ -190,6 +190,13 @@ export function playCard(state: GameState, playerId: string, cardId: string): Ga
   newState.hands = new Map(newState.hands);
   newState.hands.set(playerId, newHand);
 
+  // If trickJustCompleted is true, clear the old trick and start a new one
+  if (newState.trickJustCompleted) {
+    newState.currentTrick = null;
+    newState.trickJustCompleted = false;
+    newState.leadSuit = null;
+  }
+
   // Update or create trick
   let trick = newState.currentTrick;
   if (!trick) {
@@ -208,20 +215,16 @@ export function playCard(state: GameState, playerId: string, cardId: string): Ga
   newState.currentTrick = trick;
   console.log('[PLAYCARD]', playerId, 'played', card.suit, card.rank, '| trick now:', trick.cards.length, '/ 4');
 
+  // Track hearts broken: a heart played as discard (not lead suit) breaks hearts
+  if (card.suit === 'hearts' && newState.leadSuit !== 'hearts') {
+    newState.highestHeart = card;
+  }
   if (card.suit === 'spades' && card.rank === 12) {
     newState.queenOfSpadesPlayed = true;
   }
-  if (card.suit === 'hearts' && !newState.highestHeart) {
-    newState.highestHeart = card;
-  }
 
-  // Block play if trick just completed (cards are being shown, waiting for next trick)
-  if (newState.trickJustCompleted) {
-    console.warn('[PLAYCARD] BLOCKED: trickJustCompleted is true, card still returned to hand');
-    // Return state unchanged — card goes back to hand
-    newState.hands.set(playerId, hand);
-    return newState;
-  }
+  // NOTE: trickJustCompleted blocking is handled at the UI layer (App.tsx),
+  // not here. playCard is pure game logic — it should always process the card.
 
   // Check if trick is complete
   if (trick.cards.length === newState.players.length) {
@@ -277,19 +280,20 @@ export function playCard(state: GameState, playerId: string, cardId: string): Ga
   }
 
   return newState;
-
-  return newState;
 }
 
 function finishRound(state: GameState): GameState {
   const newState = { ...state };
 
-  // Check Shot Gun The Rose
+  // Check Shot Gun The Rose (shoot the moon)
   const sgr = isShotGunTheRose(newState.trickCardsWon);
   if (sgr.found) {
     const scores = { ...newState.scores };
+    // Holder gets 0 points; all others get +26
     for (const pid of newState.players.map(p => p.id)) {
-      if (pid !== sgr.holderId) scores[pid] = 0;
+      if (pid !== sgr.holderId) {
+        scores[pid] = (scores[pid] || 0) + 26;
+      }
     }
     newState.scores = scores;
   }

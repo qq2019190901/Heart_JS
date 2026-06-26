@@ -12,6 +12,9 @@ export const ServerToClientMsg = {
   ROOM_JOINED: 'room_joined',
 } as const;
 
+/** Standard Hearts passing cycle: L, Across, R, None, repeat */
+export const PASS_DIRECTION_CYCLE = ['left', 'across', 'right', 'none'] as const;
+
 export const ClientToServerMsg = {
   JOIN_ROOM: 'join_room',
   LEAVE_ROOM: 'leave_room',

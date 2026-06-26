@@ -1,6 +1,6 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import type { IncomingMessage } from 'http';
-import { ServerToClientMsg, ClientToServerMsg, DEFAULT_CONFIG, type RoomConfig } from './protocol';
+import { ServerToClientMsg, ClientToServerMsg, DEFAULT_CONFIG, type RoomConfig, PASS_DIRECTION_CYCLE } from './protocol';
 import type { Card, Player, GameState } from '../../src/game/types';
 import { createDeck, dealCards } from '../../src/game/deck';
 import { heartsAreBroken, canPlayCard } from '../../src/game/rules';
@@ -87,9 +87,9 @@ class GameServer {
       case ClientToServerMsg.PASS_CARD:
         if (playerId) this.handlePassCard(playerId, msg.cardIds);
         break;
-      case ClientToServerMsg.READY:
-        if (playerId) this.handleReady(playerId);
-        break;
+      case ClientToServerMsg.READY_UP:
+        if (playerId) this.handleReadyUp(playerId);
+        break
     }
   }
 
@@ -107,7 +107,7 @@ class GameServer {
     this.broadcastToRoom(roomId, {
       type: ServerToClientMsg.ROOM_CREATED,
       roomId,
-      players: room.players.map(p => ({ id: p.id, name: p.name })),
+      players: room.players.map(p => ({ id: p.id, name: p.name, ready: p.ready })),
     });
   }
 
@@ -126,12 +126,8 @@ class GameServer {
     this.broadcastToRoom(roomId, {
       type: ServerToClientMsg.PLAYER_JOINED,
       player: { id: this.getPlayerIdFromWs(ws)!, name: playerName },
-      players: room.players.map(p => ({ id: p.id, name: p.name })),
+      players: room.players.map(p => ({ id: p.id, name: p.name, ready: p.ready })),
     });
-
-    if (room.players.length >= 4 && !room.gameState) {
-      this.startGame(room);
-    }
   }
 
   private handleDisconnect(ws: WebSocket) {
@@ -227,7 +223,7 @@ class GameServer {
     }
 
     // Check direction for this round
-    const passCycle: Array<'left' | 'none' | 'right'> = ['left', 'none', 'right', 'none'];
+    const passCycle = PASS_DIRECTION_CYCLE;
     const passDir = passCycle[(gs.roundNumber - 1) % 4];
     gs.passedDirections[playerId] = passDir as 'left' | 'right' | 'none';
 
@@ -272,8 +268,7 @@ class GameServer {
     const gs = room.gameState;
     if (!gs) return;
 
-    const passCycle = ['left', 'none', 'right', 'none'];
-    const passDir = passCycle[(gs.roundNumber - 1) % 4];
+    const passDir = PASS_DIRECTION_CYCLE[(gs.roundNumber - 1) % 4];
     const playerPassCards = (gs as any)._playerPassCards as Record<string, Card[]> | undefined;
 
     if (passDir !== 'none') {
@@ -286,8 +281,12 @@ class GameServer {
         let receiveFrom: number;
         if (passDir === 'left') {
           receiveFrom = (i - 1 + gs.players.length) % gs.players.length;
-        } else {
+        } else if (passDir === 'right') {
           receiveFrom = (i + 1) % gs.players.length;
+        } else if (passDir === 'across') {
+          receiveFrom = (i - 2 + gs.players.length) % gs.players.length;
+        } else {
+          receiveFrom = i;
         }
         const received = playerPassCards?.[gs.players[receiveFrom].id] || [];
         updatedHand = [...updatedHand, ...received];
@@ -326,6 +325,50 @@ class GameServer {
     });
 
     this.processAiTurns(room);
+  }
+
+  private handleReadyUp(playerId: string) {
+    const roomId = this.playerRoom.get(playerId);
+    if (!roomId) return;
+    const room = this.rooms.get(roomId);
+    if (!room || room.gameState) return;
+
+    const player = room.players.find(p => p.id === playerId);
+    if (!player) return;
+    player.ready = true;
+
+    // Broadcast updated player list with ready status
+    this.broadcastToRoom(roomId, {
+      type: ServerToClientMsg.PLAYER_JOINED,
+      player: { id: player.id, name: player.name, ready: true },
+      players: room.players.map(p => ({ id: p.id, name: p.name, ready: p.ready })),
+    });
+
+    // Check if all players are ready and room is full (or config says use AI)
+    const allReady = room.players.every(p => p.ready);
+    const isFullOrFilled = room.players.length >= 4 || room.config.useAi && room.players.length + room.config.aiCount >= 4;
+
+    if (allReady && isFullOrFilled) {
+      // Fill with AI if needed
+      while (room.players.length < 4 && room.config.useAi) {
+        const aiNames = ['AI 左', 'AI 上', 'AI 右'];
+        const aiCount = room.players.filter(p => p.isAi).length;
+        if (aiCount < 3) {
+          const aiPlayer: ServerPlayer = {
+            id: `ai-${Date.now()}-${aiCount}`,
+            name: aiNames[aiCount] || `AI ${aiCount + 1}`,
+            ws: null as any,
+            isAi: true,
+            ready: true,
+          };
+          room.players.push(aiPlayer);
+        } else {
+          break;
+        }
+      }
+
+      this.startGame(room);
+    }
   }
 
   private handleReady(_playerId: string) {}
@@ -455,7 +498,7 @@ class GameServer {
     const gs = room.gameState;
     if (!gs || gs.phase !== 'passing') return;
 
-    const passCycle: Array<'left' | 'none' | 'right'> = ['left', 'none', 'right', 'none'];
+    const passCycle = PASS_DIRECTION_CYCLE;
     const passDir = passCycle[(gs.roundNumber - 1) % 4];
 
     if (passDir === 'none') {
@@ -494,7 +537,7 @@ class GameServer {
     }, 300);
   }
 
-  private serverPassCards(hand: Card[], direction: 'left' | 'right'): Card[] {
+  private serverPassCards(hand: Card[], direction: 'left' | 'right' | 'across'): Card[] {
     const cardsToPass: Card[] = [];
     const count = Math.min(3, Math.floor(hand.length / 4));
 

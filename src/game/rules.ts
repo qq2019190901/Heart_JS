@@ -7,49 +7,41 @@ export function getLeadSuit(trick: TrickState | null): Suit | null {
 export function canPlayCard(card: Card, hand: Card[], trick: TrickState | null, heartsBroken: boolean): boolean {
   const leadSuit = getLeadSuit(trick);
 
-  // First trick of the round
+  // First trick of the round: must play 2♣, no exceptions
   if (!trick || trick.cards.length === 0) {
-    // If hearts are broken, can play any card
-    if (heartsBroken) {
-      return true;
-    }
-    // Must play 2♣ in first trick (enforced by game engine via leader selection)
     const hasTwoOfClubs = hand.some(c => c.suit === 'clubs' && c.rank === 2);
     if (hasTwoOfClubs) {
       return card.suit === 'clubs' && card.rank === 2;
     }
-    // Check if there's any safe card in the hand (non-heart and non-QS)
-    const safeCards = hand.filter(c => c.suit !== 'hearts' && !(c.suit === 'spades' && c.rank === 12));
-    if (safeCards.length > 0) {
-      // There are safe options -- this card must be safe to play
-      if (card.suit === 'hearts') return false;
-      if (card.suit === 'spades' && card.rank === 12) return false;
-      return true;
-    }
-    // No safe alternatives exist, this card is the only option
+    // No 2♣ in hand (shouldn't happen in a fair deal), allow any card
     return true;
   }
 
-  // Must follow suit
+  // Following suit: must follow if possible
   if (card.suit === leadSuit) {
     return true;
   }
 
-  // If we have the lead suit, must play it
+  // Have lead suit but trying to play different suit — forbidden
   const hasLeadSuit = hand.some(c => c.suit === leadSuit);
   if (hasLeadSuit) {
     return false;
   }
 
-  // Can play anything if we don't have the lead suit
+  // Don't have lead suit — can play anything (including hearts as discard)
   return true;
 }
 
-export function heartsAreBroken(hands: Map<string, Card[]>): boolean {
-  for (const [, cards] of hands) {
-    if (cards.some(c => c.suit === 'hearts')) return true;
-  }
-  return false;
+/**
+ * Hearts are broken when a player has discarded a heart
+ * (i.e., played a heart while unable to follow the lead suit).
+ * This is tracked via GameState.highestHeart — if a heart has been
+ * played as a discard (not as lead suit), hearts are broken.
+ *
+ * Simpler approach: pass a `heartsBroken` flag from GameState.
+ */
+export function heartsAreBroken(hands: Map<string, Card[]>, highestHeart: Card | null): boolean {
+  return highestHeart !== null;
 }
 
 export function trickWinner(trick: TrickState, _hands: Map<string, Card[]>): string {

@@ -82,20 +82,14 @@ describe('canPlayCard', () => {
 });
 
 describe('heartsAreBroken', () => {
-  it('returns false when no hearts played', () => {
-    const hands = new Map([
-      ['p1', [makeCard('clubs', 2), makeCard('spades', 3)]],
-      ['p2', [makeCard('diamonds', 5), makeCard('clubs', 7)]],
-    ]);
-    expect(heartsAreBroken(hands)).toBe(false);
+  it('returns false when highestHeart is null', () => {
+    const hands = new Map<string, any[]>([]);
+    expect(heartsAreBroken(hands, null)).toBe(false);
   });
 
-  it('returns true when any heart exists in hands', () => {
-    const hands = new Map([
-      ['p1', [makeCard('hearts', 5), makeCard('spades', 3)]],
-      ['p2', [makeCard('diamonds', 5)]],
-    ]);
-    expect(heartsAreBroken(hands)).toBe(true);
+  it('returns true when highestHeart is set', () => {
+    const hands = new Map<string, any[]>([]);
+    expect(heartsAreBroken(hands, { suit: 'hearts', rank: 5, id: 'test' })).toBe(true);
   });
 });
 
@@ -202,5 +196,48 @@ describe('isShotGunTheRose', () => {
     ]);
     const result = isShotGunTheRose(hands);
     expect(result.found).toBe(false);
+  });
+
+  it('returns false when not all hearts present', () => {
+    const hands = new Map([
+      ['p1', [makeCard('hearts', 5), makeCard('hearts', 6), makeCard('spades', 12)]],
+      ['p2', [makeCard('clubs', 2)]],
+    ]);
+    const result = isShotGunTheRose(hands);
+    expect(result.found).toBe(false);
+  });
+
+  it('returns false when not all spade queens present', () => {
+    const heartsCards = Array.from({ length: 13 }, (_, i) => makeCard('hearts', i + 2));
+    const hands = new Map([
+      ['p1', heartsCards],
+      ['p2', [makeCard('spades', 12)]],
+    ]);
+    const result = isShotGunTheRose(hands);
+    expect(result.found).toBe(false);
+  });
+});
+
+describe('calculateRoundPoints', () => {
+  it('calculates zero points for empty hand', () => {
+    const hands = new Map([
+      ['p1', []],
+    ]);
+    const points = calculateRoundPoints(hands);
+    expect(points['p1']).toBe(0);
+  });
+
+  it('calculates correct points for mixed hand', () => {
+    const hands = new Map([
+      ['p1', [
+        makeCard('hearts', 2),
+        makeCard('hearts', 5),
+        makeCard('hearts', 10),
+        makeCard('spades', 12), // Q♠ = 13
+        makeCard('clubs', 3),
+      ]],
+    ]);
+    const points = calculateRoundPoints(hands);
+    expect(points['p1']).toBe(16); // 3 hearts(3) + 1 Q♠(13) = 16
   });
 });

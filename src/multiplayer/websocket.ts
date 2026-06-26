@@ -1,5 +1,11 @@
 import { GAME_PORT, WEBSOCKET_URL, ClientMsg, type ClientMessage } from './protocol';
 
+export interface WsPlayer {
+  id: string;
+  name: string;
+  ready: boolean;
+}
+
 export class WebSocketManager {
   private ws: WebSocket | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -7,6 +13,9 @@ export class WebSocketManager {
   private connected = false;
   private playerName: string = '';
   private currentRoomId: string = '';
+  private roomPlayers: WsPlayer[] = [];
+
+  get players() { return this.roomPlayers; }
 
   connect(onConnect?: () => void) {
     if (this.ws?.readyState === WebSocket.OPEN) return;
@@ -88,6 +97,14 @@ export class WebSocketManager {
 
   ready() {
     this.send({ type: ClientMsg.READY });
+  }
+
+  readyUp() {
+    this.send({ type: ClientMsg.READY_UP });
+  }
+
+  setRoomPlayers(players: WsPlayer[]) {
+    this.roomPlayers = players;
   }
 
   on(event: string, callback: (data: any) => void) {

@@ -9,6 +9,7 @@ export const ClientMsg = {
   PLAY_CARD: 'play_card',
   PASS_CARD: 'pass_card',
   READY: 'ready',
+  READY_UP: 'ready_up',
 } as const;
 
 // Server -> Client messages
@@ -18,13 +19,15 @@ export const ServerMsg = {
   PLAYER_JOINED: 'player_joined',
   PLAYER_LEFT: 'player_left',
   GAME_STATE: 'game_state',
-  WAIT_TURN: 'wait_turn',
   ROUND_OVER: 'round_over',
   GAME_OVER: 'game_over',
   ERROR: 'error',
   ROOM_FULL: 'room_full',
   START_GAME: 'start_game',
 } as const;
+
+/** Standard Hearts passing cycle: L, Across, R, None, repeat */
+export const PASS_DIRECTION_CYCLE = ['left', 'across', 'right', 'none'] as const;
 
 export interface CreateRoomMsg {
   type: typeof ClientMsg.CREATE_ROOM;

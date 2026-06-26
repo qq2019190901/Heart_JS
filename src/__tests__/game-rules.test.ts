@@ -51,11 +51,11 @@ describe('canPlayCard', () => {
     expect(canPlayCard(hand[2], hand, null, false)).toBe(false);
   });
 
-  it('allows any non-heart/non-QS when player does not have 2 of clubs', () => {
+  it('allows any card when player does not have 2 of clubs (no 2♣ leader)', () => {
     const hand = [card('hearts', 5), card('spades', 10), card('diamonds', 10)];
-    expect(canPlayCard(hand[0], hand, null, false)).toBe(false); // hearts blocked
-    expect(canPlayCard(hand[1], hand, null, false)).toBe(true);  // spades 10 ok
-    expect(canPlayCard(hand[2], hand, null, false)).toBe(true);  // diamonds ok
+    expect(canPlayCard(hand[0], hand, null, false)).toBe(true); // no 2♣, any card ok
+    expect(canPlayCard(hand[1], hand, null, false)).toBe(true);
+    expect(canPlayCard(hand[2], hand, null, false)).toBe(true);
   });
 
   it('blocks hearts and QS when only those remain (edge case)', () => {
@@ -81,20 +81,14 @@ describe('canPlayCard', () => {
 });
 
 describe('heartsAreBroken', () => {
-  it('returns true if any heart has been played', () => {
-    const h = handsMap([
-      ['p0', [card('hearts', 5), card('spades', 10)]],
-      ['p1', [card('diamonds', 3), card('clubs', 8)]],
-    ]);
-    expect(heartsAreBroken(h)).toBe(true);
+  it('returns true if highestHeart is set', () => {
+    const h = handsMap([]);
+    expect(heartsAreBroken(h, { suit: 'hearts' as any, rank: 5 as any, id: 'test' })).toBe(true);
   });
 
-  it('returns false if no hearts played', () => {
-    const h = handsMap([
-      ['p0', [card('spades', 10), card('diamonds', 3)]],
-      ['p1', [card('clubs', 8), card('spades', 2)]],
-    ]);
-    expect(heartsAreBroken(h)).toBe(false);
+  it('returns false if no heart has been broken', () => {
+    const h = handsMap([]);
+    expect(heartsAreBroken(h, null)).toBe(false);
   });
 });
 
@@ -216,12 +210,18 @@ describe('playCard', () => {
 });
 
 describe('getAllPlayableCards', () => {
-  it('returns only legal cards', () => {
+  it('returns all cards when no 2 of clubs in hand', () => {
     const hand = [card('hearts', 5), card('spades', 10), card('diamonds', 3)];
     const playable = getAllPlayableCards(hand, null, false);
-    // Only non-heart, non-QS cards allowed when no 2 of clubs
-    expect(playable).toHaveLength(2);
-    expect(playable.some(c => c.suit === 'spades' && c.rank === 10)).toBe(true);
-    expect(playable.some(c => c.suit === 'diamonds' && c.rank === 3)).toBe(true);
+    // No 2♣ in hand → any card is allowed
+    expect(playable).toHaveLength(3);
+  });
+
+  it('returns only 2 of clubs when player has it', () => {
+    const hand = [card('clubs', 2), card('hearts', 5), card('diamonds', 3)];
+    const playable = getAllPlayableCards(hand, null, false);
+    expect(playable).toHaveLength(1);
+    expect(playable[0].suit).toBe('clubs');
+    expect(playable[0].rank).toBe(2);
   });
 });

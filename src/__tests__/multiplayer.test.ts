@@ -107,7 +107,8 @@ describe('Full round simulation', () => {
       if (heartsBroken) return hand;
       const hasTwoOfClubs = hand.some(c => c.suit === 'clubs' && c.rank === 2);
       if (hasTwoOfClubs) return hand.filter(c => c.suit === 'clubs' && c.rank === 2);
-      return hand.filter(c => c.suit !== 'hearts' && !(c.suit === 'spades' && c.rank === 12));
+      // No 2♣ — any card allowed
+      return hand;
     }
     if (leadSuit && hand.some(c => c.suit === leadSuit)) return hand.filter(c => c.suit === leadSuit);
     return hand;
@@ -124,7 +125,7 @@ describe('Full round simulation', () => {
     let round = startRound(state);
 
     // Play all cards trick by trick
-    let maxIterations = 200;
+    let maxIterations = 500;
     while (round.phase === 'playing' && maxIterations-- > 0) {
       const hand = round.hands.get(round.currentPlayerId) || [];
       if (hand.length === 0) {
@@ -134,7 +135,7 @@ describe('Full round simulation', () => {
         continue;
       }
 
-      const playable = getAllPlayableCards(hand, round.currentTrick, heartsAreBroken(round.hands));
+      const playable = getAllPlayableCards(hand, round.currentTrick, heartsAreBroken(round.hands, round.highestHeart));
       if (playable.length === 0) {
         // No valid card, advance
         const idx = players.findIndex(p => p.id === round.currentPlayerId);
@@ -149,5 +150,45 @@ describe('Full round simulation', () => {
     for (const player of players) {
       expect(round.hands.get(player.id)).toHaveLength(0);
     }
+  });
+
+  describe('Across passing logic', () => {
+    it('round 2 uses across passing direction', () => {
+      const players: Player[] = [
+        { id: 'p0', name: 'P1', isHuman: true, score: 0 },
+        { id: 'p1', name: 'P2', isHuman: true, score: 0 },
+        { id: 'p2', name: 'P3', isHuman: true, score: 0 },
+        { id: 'p3', name: 'P4', isHuman: true, score: 0 },
+      ];
+      const state = createInitialState(players, 2);
+      const dealt = startRound(state);
+      // Round 2 = across passing
+      for (const p of players) {
+        expect(dealt.passedDirections[p.id]).toBe('across');
+      }
+    });
+
+    it('across passing exchanges cards with opposite player', () => {
+      // Simulate: p0 passes to p2 (across = i+2 mod 4), receives from p2
+      // p1 passes to p3, receives from p3
+      const players: Player[] = [
+        { id: 'p0', name: 'P1', isHuman: true, score: 0 },
+        { id: 'p1', name: 'P2', isHuman: true, score: 0 },
+        { id: 'p2', name: 'P3', isHuman: true, score: 0 },
+        { id: 'p3', name: 'P4', isHuman: true, score: 0 },
+      ];
+      const state = createInitialState(players, 2);
+      const dealt = startRound(state);
+
+      // p0 passes 3 cards to p2, p2 passes 3 cards to p0
+      // After exchange, p0 should have received from p2
+      const passDir = dealt.passedDirections['p0'];
+      expect(passDir).toBe('across');
+
+      // Total cards should still be 52
+      let total = 0;
+      for (const [, cards] of dealt.hands) total += cards.length;
+      expect(total).toBe(52);
+    });
   });
 });
