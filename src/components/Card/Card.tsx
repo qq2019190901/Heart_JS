@@ -91,7 +91,7 @@ const CardComponent: React.FC<CardComponentProps> = memo(({
           }}
         >
           <div className="w-8 h-10 rounded border border-white/20 flex items-center justify-center">
-            <span className="text-white/40 text-lg">\u2665</span>
+            <span className="text-white/40 text-lg">♥</span>
           </div>
         </div>
       ) : (

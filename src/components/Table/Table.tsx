@@ -88,7 +88,7 @@ const Table: React.FC<TableProps> = memo(({
                 }`}
               >
                 {isHuman ? '你' : player.name}
-                {isActive && <span className="ml-1 animate-pulse">\u25CF</span>}
+                {isActive && <span className="ml-1 animate-pulse">●</span>}
                 <span className="text-white/60 text-xs bg-black/40 px-1.5 py-0.5 sm:px-2 sm:py-0.5 rounded-full">{player.score} 分</span>
               </div>
             </div>
