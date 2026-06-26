@@ -1,42 +1,45 @@
 import { useState, useCallback, useEffect } from 'react';
 
 export interface ResponsiveScale {
-  /** Scale factor for card sizes (1.0 = normal, <1 = smaller) */
   cardScale: number;
-  /** Scale factor for font sizes */
   fontScale: number;
-  /** Scale factor for table dimensions */
   tableScale: number;
-  /** Scale factor for spacing */
   spacingScale: number;
-  /** Whether we're in a compact mode */
   isCompact: boolean;
-  /** Whether we're in a very compact mode */
   isVeryCompact: boolean;
-  /** Viewport width */
   vw: number;
-  /** Viewport height */
   vh: number;
-  /** Aspect ratio (width/height) */
   aspectRatio: number;
+  /** Minimum dimension (used for clamp bounds) */
+  minDim: number;
+  /** Larger dimension (wide screens) */
+  maxDim: number;
 }
 
 /**
  * Computes responsive scales based on viewport dimensions.
- * Cards and table scale down on small screens, fonts stay readable.
+ *
+ * Strategy:
+ * - Small/portrait screens: scale DOWN to fit everything
+ * - Large/wide screens: scale UP to fill available space (no tiny cards on 1080p+)
+ * - Card size is tied to viewport height (the constraining dimension in landscape)
  */
 export function useResponsiveScale(): ResponsiveScale {
-  const [dims, setDims] = useState(() => ({
-    vw: window.innerWidth,
-    vh: window.innerHeight,
-  }));
+  const [dims, setDims] = useState(() => {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    return { vw, vh, minDim: Math.min(vw, vh), maxDim: Math.max(vw, vh) };
+  });
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
     const handleResize = () => {
-      // Debounce resize events
       clearTimeout(timer);
-      timer = setTimeout(() => setDims({ vw: window.innerWidth, vh: window.innerHeight }), 100);
+      timer = setTimeout(() => {
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        setDims({ vw, vh, minDim: Math.min(vw, vh), maxDim: Math.max(vw, vh) });
+      }, 100);
     };
     window.addEventListener('resize', handleResize);
     return () => {
@@ -46,43 +49,52 @@ export function useResponsiveScale(): ResponsiveScale {
   }, []);
 
   return useCallback((): ResponsiveScale => {
-    const { vw, vh } = dims;
+    const { vw, vh, minDim, maxDim } = dims;
     const aspectRatio = vw / vh;
 
-    // Base card width target: ~70px at normal, scales with available space
-    // We need room for 13 cards in hand with overlap, plus table
-    const minDim = Math.min(vw, vh);
-    const maxDim = Math.max(vw, vh);
-
-    // Card scale: starts at 1.0 for large screens, scales down on small/compact
-    // Portrait phones get more aggressive scaling
+    // --- Card scale: grows with the smaller dimension ---
+    // On wide desktop (1920x1080), vh=1080 -> cards should be big
+    // On phone landscape (720x360), minDim=360 -> cards shrink
+    // On phone portrait (390x844), minDim=390 -> cards moderate
     let cardScale = 1.0;
     if (aspectRatio < 0.7) {
-      // Very narrow (portrait phone)
-      cardScale = Math.max(0.45, Math.min(0.75, vh / 900));
+      // Very narrow portrait phone
+      cardScale = Math.max(0.4, Math.min(0.65, vh / 1000));
     } else if (aspectRatio < 1.0) {
-      // Narrow (tablet portrait)
-      cardScale = Math.max(0.6, Math.min(0.85, vh / 800));
+      // Tablet portrait / narrow laptop
+      cardScale = Math.max(0.55, Math.min(0.8, vh / 900));
+    } else if (minDim < 400) {
+      // Small phone
+      cardScale = 0.5;
     } else if (minDim < 500) {
-      // Small desktop/tablet
-      cardScale = Math.max(0.65, minDim / 600);
-    } else if (minDim < 700) {
-      cardScale = Math.max(0.8, minDim / 700);
+      cardScale = 0.65;
+    } else if (minDim < 600) {
+      cardScale = 0.8;
+    } else if (minDim < 800) {
+      // Typical laptop (768+)
+      cardScale = 0.95;
+    } else if (minDim < 1000) {
+      // Large laptop / 2K
+      cardScale = 1.1;
     } else {
-      cardScale = 1.0;
+      // 4K+
+      cardScale = 1.3;
     }
 
-    // Font scale: less aggressive scaling, keep readable
+    // --- Font scale: keep readable but grow on big screens ---
     let fontScale = 1.0;
-    if (minDim < 400) fontScale = 0.7;
+    if (minDim < 400) fontScale = 0.65;
     else if (minDim < 500) fontScale = 0.8;
     else if (minDim < 650) fontScale = 0.9;
+    else if (minDim > 1400) fontScale = 1.15;
+    else if (minDim > 1000) fontScale = 1.05;
 
-    // Table scale: proportional to card scale but can be slightly larger
-    const tableScale = Math.max(cardScale * 0.95, 0.5);
+    // --- Table scale: fills available space ---
+    // On wide screens, table should be large and centered
+    const tableScale = Math.max(cardScale * 0.9, 0.5);
 
-    // Spacing scale
-    const spacingScale = Math.max(cardScale * 0.8, 0.5);
+    // --- Spacing scale ---
+    const spacingScale = Math.max(cardScale * 0.85, 0.5);
 
     const isCompact = minDim < 600;
     const isVeryCompact = minDim < 450;
@@ -97,14 +109,12 @@ export function useResponsiveScale(): ResponsiveScale {
       vw,
       vh,
       aspectRatio,
+      minDim,
+      maxDim,
     };
   }, [dims]);
 }
 
-/**
- * Hook that returns a live responsive scale object.
- * Calls the scaler function on mount and re-subscribes to resize.
- */
 export function useResponsive(): ResponsiveScale {
   const scaler = useResponsiveScale();
   const [scale, setScale] = useState(scaler);
@@ -112,7 +122,6 @@ export function useResponsive(): ResponsiveScale {
   useEffect(() => {
     setScale(scaler());
     const unsub = () => setScale(scaler());
-    // Listen for resize via a custom event
     window.addEventListener('responsive-resize', unsub);
     return () => window.removeEventListener('responsive-resize', unsub);
   }, [scaler]);
@@ -120,7 +129,6 @@ export function useResponsive(): ResponsiveScale {
   return scale;
 }
 
-/** Trigger responsive recalculation on viewport change */
 function triggerResponsiveUpdate() {
   window.dispatchEvent(new Event('responsive-resize'));
 }

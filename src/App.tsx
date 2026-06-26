@@ -788,7 +788,7 @@ function App() {
     const selectedArr = humanHand.filter(c => selectedPassCardIds.has(c.id));
 
     // Responsive passing phase
-    const passCardMinPx = resp.isVeryCompact ? 28 : resp.isCompact ? 36 : 48;
+    const passCardMinPx = resp.isVeryCompact ? 28 : resp.isCompact ? 36 : resp.maxDim > 1200 ? 64 : 48;
     const sectionGap = resp.isVeryCompact ? '8px' : resp.isCompact ? '12px' : '24px';
     const titleSize = resp.isVeryCompact ? 'text-base' : resp.isCompact ? 'text-xl' : 'text-2xl';
     const bodySize = resp.isVeryCompact ? 'text-[10px]' : resp.isCompact ? 'text-xs' : 'text-sm';
@@ -903,12 +903,14 @@ function App() {
     getAllPlayableCards(humanHand, gameState.currentTrick, heartsAreBroken(gameState.hands, gameState.highestHeart)).map(c => c.id)
   );
 
-  // Responsive hand layout
+  // Responsive hand layout — scales with viewport
   const handGap = resp.isVeryCompact ? -4 : resp.isCompact ? -8 : undefined;
-  const handMaxH = resp.vh < 500 ? '120px' : resp.vh < 700 ? '150px' : '200px';
+  const handMaxH = resp.vh < 450 ? '100px' : resp.vh < 600 ? '130px' : resp.vh < 800 ? '160px' : '100dvh';
   const topBarFontSize = resp.isVeryCompact ? '11px' : resp.isCompact ? '12px' : '';
   const statusFontSize = resp.isVeryCompact ? '10px' : resp.isCompact ? '12px' : '';
   const cardMinPx = resp.isVeryCompact ? 30 : resp.isCompact ? 40 : 48;
+  // On large screens, give hand more height budget
+  const handMaxHFixed = resp.maxDim > 1200 ? '220px' : resp.maxDim > 900 ? '180px' : undefined;
 
   return (
     <div className="relative w-full h-full flex flex-col" style={{
@@ -966,7 +968,7 @@ function App() {
         <div
           className="flex items-end justify-center flex-wrap gap-0.5 sm:gap-1 px-1 sm:px-2"
           style={{
-            maxHeight: handMaxH,
+            maxHeight: handMaxHFixed ?? handMaxH,
             gap: handGap,
           }}
         >

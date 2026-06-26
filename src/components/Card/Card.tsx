@@ -50,23 +50,24 @@ const CardComponent: React.FC<CardComponentProps> = memo(({
   const color = SUIT_COLORS[card.suit];
   const rankDisplay = getRankDisplay(card.rank);
 
-  // Dynamic card dimensions using clamp for smooth scaling
-  // Normal card: width clamp(48px, 14vw, 80px), height proportional
-  // Small card: width clamp(32px, 8vw, 56px), height proportional
+  // Dynamic card dimensions using clamp for smooth scaling.
+  // Normal card: grows from 64px up to 120px based on viewport.
+  // Small card: grows from 36px up to 80px.
+  // On 1080p+ screens the higher clamp max ensures cards fill space nicely.
   const cardW = small
-    ? `clamp(${minPx}px, 8vw, 56px)`
-    : `clamp(${minPx + 16}px, 14vw, 80px)`;
+    ? `clamp(${minPx}px, 9vw, 80px)`
+    : `clamp(64px, 16vw, 120px)`;
   const cardH = small
-    ? `clamp(${Math.round(minPx * 1.4)}px, 11.2vw, 78px)`
-    : `clamp(${Math.round((minPx + 16) * 1.4)}px, 19.6vw, 112px)`;
+    ? `clamp(${Math.round(minPx * 1.4)}px, 12.6vw, 112px)`
+    : `clamp(90px, 22.4vw, 168px)`;
 
   // Corner text sizes scale proportionally
   const cornerFontSize = small
-    ? `clamp(${Math.round(minPx * 0.17)}px, 2.5vw, 13px)`
-    : `clamp(${Math.round((minPx + 16) * 0.17)}px, 3vw, 14px)`;
+    ? `clamp(${Math.round(minPx * 0.22)}px, 2.8vw, 16px)`
+    : `clamp(11px, 2.2vw, 18px)`;
   const suitFontSize = small
-    ? `clamp(${Math.round(minPx * 0.12)}px, 1.8vw, 10px)`
-    : `clamp(${Math.round((minPx + 16) * 0.12)}px, 2.2vw, 12px)`;
+    ? `clamp(${Math.round(minPx * 0.16)}px, 2vw, 12px)`
+    : `clamp(8px, 1.6vw, 14px)`;
 
   // Center pip sizes
   const pipLayout = getPipLayout(card.rank);

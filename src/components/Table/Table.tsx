@@ -14,35 +14,45 @@ const Table: React.FC<TableProps> = memo(({
   trick, currentPlayerId, humanPlayerId, players, aiHands = new Map(),
 }) => {
   const [isWide, setIsWide] = useState(false);
-  const [minDim, setMinDim] = useState(Math.min(window.innerWidth, window.innerHeight));
+  const [dims, setDims] = useState(() => ({
+    vw: window.innerWidth,
+    vh: window.innerHeight,
+    minDim: Math.min(window.innerWidth, window.innerHeight),
+  }));
 
   useEffect(() => {
     const check = () => {
-      setIsWide(window.innerWidth >= 1024);
-      setMinDim(Math.min(window.innerWidth, window.innerHeight));
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      setIsWide(vw >= 1024);
+      setDims({ vw, vh, minDim: Math.min(vw, vh) });
     };
     check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // Responsive table sizing based on viewport
-  const tableWidth = isWide
-    ? `min(75vw, 900px, calc(100vh * 1.2))`
-    : `min(96vw, ${Math.round(minDim * 1.1)}px)`;
-  const tableHeight = isWide
-    ? `min(70vh, 600px)`
-    : `min(55vh, ${Math.round(minDim * 0.7)}px)`;
+  // Responsive table sizing: fill available space on wide screens
+  // Table needs room for: AI hands outside (top ~13 cards * ~22px, sides ~13 cards * ~28px)
+  // + player hand below (~130px) + margins
+  const TABLE_MARGIN = 180; // space for AI hands + player hand + badges
+  const availW = dims.vw - TABLE_MARGIN;
+  const availH = dims.vh - TABLE_MARGIN;
 
-  // Trick card offset scales with table size
-  const trickOffset = isWide ? 28 : 18;
+  // Target a square-ish table that fills the available space
+  const tableSide = Math.min(availW, availH * 1.1);
+  const tableWidth = `min(${Math.round(tableSide)}px, ${availW}px, 95vw)`;
+  const tableHeight = `min(${Math.round(tableSide * 0.85)}px, ${availH}px, 85vh)`;
+
+  // Trick card offset
+  const trickOffset = dims.minDim < 450 ? 14 : dims.minDim < 600 ? 20 : 28;
 
   // Badge font scales with dimension
-  const badgeFontSize = minDim < 450 ? '10px' : minDim < 600 ? '11px' : '';
-  const scoreFontSize = minDim < 450 ? '9px' : minDim < 600 ? '10px' : '';
+  const badgeFontSize = dims.minDim < 450 ? '10px' : dims.minDim < 600 ? '11px' : '';
+  const scoreFontSize = dims.minDim < 450 ? '9px' : dims.minDim < 600 ? '10px' : '';
 
   // AI card size floor
-  const aiCardMinPx = minDim < 450 ? 28 : minDim < 600 ? 36 : 48;
+  const aiCardMinPx = dims.minDim < 450 ? 28 : dims.minDim < 600 ? 36 : 48;
 
   return (
     <div className="relative w-full h-full flex items-center justify-center">
