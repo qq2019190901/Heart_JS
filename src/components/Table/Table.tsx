@@ -32,18 +32,22 @@ const Table: React.FC<TableProps> = memo(({
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // Responsive table sizing: fill available space on wide screens
-  // Table needs room for: AI hands outside (top ~13 cards * ~22px, sides ~13 cards * ~28px)
-  // + player hand below (~130px) + badges
-  const TABLE_MARGIN = 180;
-  const availW = dims.vw - TABLE_MARGIN;
-  const availH = dims.vh - TABLE_MARGIN;
+  // Responsive table sizing: compute width and height independently from available space.
+  //
+  // Width: constrained by viewport width minus AI side-hand columns + badge margin.
+  //   Side AI hands stick out ~70px each, badge margin ~40px each side.
+  // Height: constrained by viewport height minus top AI hand + bottom player hand + badges.
+  //   Top AI hand ~120px, bottom player hand ~150px, badge margin ~40px.
+  //
+  // Neither dimension depends on the other — each adapts to its own constraint.
 
-  // On wide screens, stretch table horizontally: width based on height ratio, capped by availW
-  // The table should be wider than tall so left/right badges are near edges
-  const idealWidth = Math.min(availW, availH * 1.6);
-  const tableWidth = `${Math.round(idealWidth)}px`;
-  const tableHeight = `min(${availH}px, 85vh)`;
+  // Width: viewport minus side margins (AI hands outside + badge clearance)
+  const SIDE_MARGIN = 160; // ~70px AI hand + ~40px badge + ~50px buffer each side
+  const tableWidth = `min(calc(100vw - ${SIDE_MARGIN}px), 95vw)`;
+
+  // Height: viewport minus top/bottom margins (AI hand + player hand + badges)
+  const TOP_BOTTOM_MARGIN = 320; // ~120px top AI + ~150px player hand + ~50px badges
+  const tableHeight = `min(calc(100vh - ${TOP_BOTTOM_MARGIN}px), 85vh)`;
 
   // Trick card offset
   const trickOffset = dims.minDim < 450 ? 14 : dims.minDim < 600 ? 20 : 28;
