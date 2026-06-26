@@ -27,8 +27,8 @@ const WsLobby: React.FC<WsLobbyProps> = memo(({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const isCompact = minDim < 500;
-  const isVeryCompact = minDim < 400;
+  const isPhone = minDim < 450;
+  const isTablet = minDim >= 450 && minDim < 768;
 
   const handleCopyRoomCode = () => {
     navigator.clipboard.writeText(roomId).then(() => {
@@ -40,18 +40,18 @@ const WsLobby: React.FC<WsLobbyProps> = memo(({
   const localPlayerReady = players.find(p => p.name === playerName)?.ready ?? false;
   const allReady = players.length > 0 && players.every(p => p.ready);
 
-  const containerPadding = isVeryCompact ? 'p-2' : isCompact ? 'p-3 sm:p-4' : 'p-4 sm:p-6';
-  const containerMaxWidth = isVeryCompact ? 'max-w-[95vw]' : 'max-w-md';
-  const titleSize = isVeryCompact ? 'text-base' : isCompact ? 'text-lg' : 'text-xl';
-  const subtitleSize = isVeryCompact ? 'text-[10px]' : isCompact ? 'text-xs' : 'text-sm';
-  const labelSize = isVeryCompact ? 'text-[9px]' : 'text-xs';
-  const roomCodeSize = isVeryCompact ? 'text-2xl' : 'text-3xl';
-  const playerItemPadding = isCompact ? 'px-2 py-1' : 'px-3 py-2';
-  const playerNameSize = isVeryCompact ? 'text-[11px]' : isCompact ? 'text-xs' : 'text-sm';
-  const metaSize = isVeryCompact ? 'text-[9px]' : 'text-xs';
-  const btnPadding = isVeryCompact ? 'py-1.5' : isCompact ? 'py-2' : 'py-2.5';
-  const btnFontSize = isVeryCompact ? 'text-[10px]' : isCompact ? 'text-xs' : 'text-sm';
-  const hintSize = isVeryCompact ? 'text-[9px]' : isCompact ? 'text-[10px]' : 'text-xs';
+  const containerPadding = isPhone ? 'p-2' : isTablet ? 'p-3 sm:p-4' : 'p-4 sm:p-6';
+  const containerMaxWidth = isPhone ? 'max-w-[95vw]' : 'max-w-md';
+  const titleSize = isPhone ? 'text-base' : isTablet ? 'text-lg' : 'text-xl';
+  const subtitleSize = isPhone ? 'text-[10px]' : isTablet ? 'text-xs' : 'text-sm';
+  const labelSize = isPhone ? 'text-[9px]' : 'text-xs';
+  const roomCodeSize = isPhone ? 'text-2xl' : 'text-3xl';
+  const playerItemPadding = isPhone ? 'px-2 py-1' : 'px-3 py-2';
+  const playerNameSize = isPhone ? 'text-[11px]' : isTablet ? 'text-xs' : 'text-sm';
+  const metaSize = isPhone ? 'text-[9px]' : 'text-xs';
+  const btnPadding = isPhone ? 'py-1.5' : isTablet ? 'py-2' : 'py-2.5';
+  const btnFontSize = isPhone ? 'text-[10px]' : isTablet ? 'text-xs' : 'text-sm';
+  const hintSize = isPhone ? 'text-[9px]' : isTablet ? 'text-[10px]' : 'text-xs';
 
   return (
     <div className="min-h-screen min-h-dvh flex flex-col items-center justify-center p-2 sm:p-4"

@@ -12,6 +12,11 @@ interface CardComponentProps {
   /** Minimum size floor in pixels (for very compact screens) */
   minPx?: number;
   animate?: boolean;
+  /** Accessibility label */
+  ariaLabel?: string;
+  /** Keyboard handler */
+  onKeyDown?: (e: React.KeyboardEvent) => void;
+  tabIndex?: number;
 }
 
 const SUIT_ICONS: Record<string, string> = {
@@ -28,11 +33,12 @@ const SUIT_COLORS: Record<string, string> = {
   spades: '#1A1A1A',
 };
 
-// Face card center symbols
+// Face card center symbols — use standard poker face icons
 const FACE_SYMBOLS: Record<number, string> = {
-  11: '\u2658',
-  12: '\u2655',
-  13: '\u2654',
+  11: 'J',
+  12: 'Q',
+  13: 'K',
+  14: 'A',
 };
 
 const CardComponent: React.FC<CardComponentProps> = memo(({
@@ -44,16 +50,18 @@ const CardComponent: React.FC<CardComponentProps> = memo(({
   small = false,
   minPx = 48,
   animate = true,
+  ariaLabel,
+  onKeyDown,
+  tabIndex = 0,
 }) => {
   const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
   const icon = SUIT_ICONS[card.suit];
   const color = SUIT_COLORS[card.suit];
   const rankDisplay = getRankDisplay(card.rank);
 
-  // Dynamic card dimensions using clamp for smooth scaling.
-  // Normal card: grows from 64px up to 120px based on viewport.
-  // Small card: grows from 36px up to 80px.
-  // On 1080p+ screens the higher clamp max ensures cards fill space nicely.
+  // Dynamic card dimensions using CSS clamp for smooth scaling.
+  // IMPORTANT: Do NOT override these with inline width/height — let CSS handle it.
   const cardW = small
     ? `clamp(${minPx}px, 9vw, 80px)`
     : `clamp(64px, 16vw, 120px)`;
@@ -74,14 +82,26 @@ const CardComponent: React.FC<CardComponentProps> = memo(({
   const pipSize = getPipSize(card.rank, small, minPx);
 
   const classes = [
-    'rounded-lg cursor-pointer select-none relative flex-shrink-0',
+    'rounded-lg cursor-pointer select-none relative flex-shrink-0 gpu-accelerated',
     selected ? 'ring-2 ring-green-400 ring-offset-2 ring-offset-emerald-800' : '',
     disabled ? 'cursor-not-allowed' : '',
+    focused ? 'ring-2 ring-blue-400 ring-offset-1' : '',
   ].filter(Boolean).join(' ');
 
-  let boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
-  if (selected) boxShadow = '0 8px 25px rgba(46,204,113,0.4)';
-  else if (hovered && !disabled) boxShadow = '0 6px 20px rgba(0,0,0,0.3)';
+  let boxShadow = 'var(--shadow-card, 0 2px 8px rgba(0,0,0,0.2))';
+  if (selected) boxShadow = 'var(--shadow-card-selected, 0 8px 25px rgba(46,204,113,0.4))';
+  else if (hovered && !disabled) boxShadow = 'var(--shadow-card-hover, 0 6px 20px rgba(0,0,0,0.3))';
+
+  // Accessible label: "Ace of Spades" etc.
+  const label = ariaLabel || `${getRankDisplay(card.rank)} of ${card.suit}`;
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (!disabled && onClick) onClick();
+    }
+    if (onKeyDown) onKeyDown(e);
+  };
 
   return (
     <div
@@ -89,7 +109,7 @@ const CardComponent: React.FC<CardComponentProps> = memo(({
       style={{
         width: cardW,
         height: cardH,
-        backgroundColor: faceDown ? '#1a5276' : 'white',
+        backgroundColor: faceDown ? 'var(--color-card-face-down-top, #1a5276)' : 'white',
         boxShadow,
         transform: hovered && !disabled && !faceDown ? 'translateY(-8px) scale(1.05)' : undefined,
         transition: 'transform 0.15s ease-out, box-shadow 0.15s ease-out',
@@ -100,12 +120,19 @@ const CardComponent: React.FC<CardComponentProps> = memo(({
       onClick={!disabled ? onClick : undefined}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      onKeyDown={handleKeyDown}
+      tabIndex={disabled ? -1 : tabIndex}
+      role={disabled ? undefined : 'button'}
+      aria-label={label}
+      aria-disabled={disabled}
     >
       {faceDown ? (
         <div
           className="w-full h-full rounded-lg flex items-center justify-center"
           style={{
-            background: 'linear-gradient(135deg, #1a5276 0%, #2e86c1 50%, #1a5276 100%)',
+            background: 'linear-gradient(135deg, var(--color-card-face-down-top, #1a5276) 0%, var(--color-card-face-down-mid, #2e86c1) 50%, var(--color-card-face-down-top, #1a5276) 100%)',
           }}
         >
           <div
@@ -130,7 +157,7 @@ const CardComponent: React.FC<CardComponentProps> = memo(({
           <div className="absolute" style={{ top: '12%', bottom: '12%', left: '14%', right: '14%' }}>
             {pipLayout.map((pos, i) => {
               const displayChar = (card.rank >= 11 && card.rank <= 13)
-                ? FACE_SYMBOLS[card.rank]
+                ? FACE_SYMBOLS[card.rank] ?? icon
                 : icon;
               return (
                 <span

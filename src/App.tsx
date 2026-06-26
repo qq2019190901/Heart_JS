@@ -11,7 +11,6 @@ import { getAiDecision } from './game/ai';
 import { getAiPlayDecision } from './game/ai-turn';
 import { heartsAreBroken, canPlayCard, getAllPlayableCards } from './game/rules';
 import { wsManager } from './multiplayer/websocket';
-import { useBreakpoint } from './hooks/useBreakpoint';
 import { useResponsive } from './hooks/useResponsive';
 import { lanPeer, LanPeerManager } from './network/lan-peer';
 import { roomManager } from './network/room-manager';
@@ -35,7 +34,6 @@ function App() {
   const aiTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const trickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const gameStateRef = useRef<GameState | null>(null);
-  const isMobile = useBreakpoint(768);
   const resp = useResponsive();
 
   // LAN state
@@ -788,12 +786,12 @@ function App() {
     const selectedArr = humanHand.filter(c => selectedPassCardIds.has(c.id));
 
     // Responsive passing phase
-    const passCardMinPx = resp.isVeryCompact ? 28 : resp.isCompact ? 36 : resp.maxDim > 1200 ? 64 : 48;
-    const sectionGap = resp.isVeryCompact ? '8px' : resp.isCompact ? '12px' : '24px';
-    const titleSize = resp.isVeryCompact ? 'text-base' : resp.isCompact ? 'text-xl' : 'text-2xl';
-    const bodySize = resp.isVeryCompact ? 'text-[10px]' : resp.isCompact ? 'text-xs' : 'text-sm';
-    const btnFontSize = resp.isVeryCompact ? 'text-xs' : resp.isCompact ? 'text-sm' : 'text-base';
-    const confirmBtnPadding = resp.isVeryCompact ? 'px-3 py-1.5' : resp.isCompact ? 'px-5 py-2' : 'px-6 py-2.5';
+    const passCardMinPx = resp.minDim < 450 ? 28 : resp.minDim < 600 ? 36 : resp.maxDim > 1200 ? 64 : 48;
+    const sectionGap = resp.minDim < 450 ? '8px' : resp.minDim < 600 ? '12px' : '24px';
+    const titleSize = resp.minDim < 450 ? 'text-base' : resp.minDim < 600 ? 'text-xl' : 'text-2xl';
+    const bodySize = resp.minDim < 450 ? 'text-[10px]' : resp.minDim < 600 ? 'text-xs' : 'text-sm';
+    const btnFontSize = resp.minDim < 450 ? 'text-xs' : resp.minDim < 600 ? 'text-sm' : 'text-base';
+    const confirmBtnPadding = resp.minDim < 450 ? 'px-3 py-1.5' : resp.minDim < 600 ? 'px-5 py-2' : 'px-6 py-2.5';
 
     return (
       <div className="min-h-screen min-h-dvh flex flex-col overflow-hidden" style={{
@@ -904,37 +902,37 @@ function App() {
   );
 
   // Responsive hand layout — scales with viewport
-  const handGap = resp.isVeryCompact ? -4 : resp.isCompact ? -8 : undefined;
-  const handMaxH = resp.vh < 450 ? '100px' : resp.vh < 600 ? '130px' : resp.vh < 800 ? '160px' : '100dvh';
-  const topBarFontSize = resp.isVeryCompact ? '11px' : resp.isCompact ? '12px' : '';
-  const statusFontSize = resp.isVeryCompact ? '10px' : resp.isCompact ? '12px' : '';
-  const cardMinPx = resp.isVeryCompact ? 30 : resp.isCompact ? 40 : 48;
-  // On large screens, give hand more height budget
-  const handMaxHFixed = resp.maxDim > 1200 ? '220px' : resp.maxDim > 900 ? '180px' : undefined;
+  const handGap = resp.isVeryCompact ? -6 : resp.isCompact ? -10 : -4;
+  const handMaxH = resp.vh < 400 ? '80px' : resp.vh < 500 ? '100px' : resp.vh < 650 ? '130px' : resp.vh < 800 ? '150px' : undefined;
+  const topBarFontSize = resp.isVeryCompact ? '10px' : resp.isCompact ? '11px' : undefined;
+  const statusFontSize = resp.isVeryCompact ? '9px' : resp.isCompact ? '11px' : undefined;
+  const cardMinPx = resp.isVeryCompact ? 28 : resp.isCompact ? 36 : 48;
 
   return (
-    <div className="relative w-full h-full flex flex-col" style={{
-      background: 'linear-gradient(180deg, #0d5e28 0%, #094a20 100%)',
+    <div className="relative w-full h-full flex flex-col overflow-hidden" style={{
+      background: 'linear-gradient(180deg, var(--color-bg-gradient-start, #0d5e28) 0%, var(--color-bg-gradient-end, #094a20) 100%)',
     }}>
       {/* Top bar */}
-      <div className="flex items-center justify-between px-3 py-1.5 sm:px-4 sm:py-2 bg-black/0 shrink-0 fixed top-0 left-0 right-0 z-50">
+      <div className="flex items-center justify-between px-2 py-1 sm:px-4 sm:py-2 bg-black/0 shrink-0 fixed top-0 left-0 right-0 z-50">
         <button
           className="text-white/60 hover:text-white transition-colors"
           style={topBarFontSize ? { fontSize: topBarFontSize } : {}}
           onClick={() => setMode(null)}
+          aria-label="返回主菜单"
         >
           ← 菜单
         </button>
         <div
-          className="text-white/70 font-medium"
+          className="text-white/70 font-medium truncate px-1"
           style={topBarFontSize ? { fontSize: topBarFontSize } : {}}
+          aria-live="polite"
         >
           {mode === 'lan' ? `LAN · ${lanRoomCode}` : `第 ${gameState.roundNumber} 回合`}
         </div>
       </div>
 
       {/* Table area */}
-      <div className="flex-1 flex items-center justify-center p-1 sm:p-4 min-h-0 overflow-hidden">
+      <div className="flex-1 flex items-center justify-center p-0.5 sm:p-4 min-h-0 overflow-visible">
         <Table
           trick={gameState.currentTrick}
           currentPlayerId={gameState.currentPlayerId}
@@ -947,11 +945,13 @@ function App() {
       </div>
 
       {/* Bottom: status + hand */}
-      <div className="shrink-0 flex flex-col items-center px-1 sm:px-4 pb-2 sm:pb-3 pt-2">
+      <div className="shrink-0 flex flex-col items-center px-0.5 sm:px-4 pb-1 sm:pb-3 pt-2" style={{ marginTop: '4px' }}>
         {/* Turn status */}
         <div
-          className="h-5 sm:h-6 flex items-center justify-center shrink-0 w-full mb-0.5 sm:mb-1"
+          className="h-5 sm:h-6 flex items-center justify-center shrink-0 w-full mb-0.5"
           style={{ fontSize: statusFontSize }}
+          aria-live="polite"
+          role="status"
         >
           {gameState.currentPlayerId === humanId && !waitingForAi && (
             <div className="text-green-300 animate-pulse font-semibold">轮到你了！</div>
@@ -966,11 +966,13 @@ function App() {
 
         {/* Player hand */}
         <div
-          className="flex items-end justify-center flex-wrap gap-0.5 sm:gap-1 px-1 sm:px-2"
+          className="flex items-end justify-center flex-wrap gap-0.5 px-0.5 sm:px-2"
           style={{
-            maxHeight: handMaxHFixed ?? handMaxH,
+            maxHeight: handMaxH,
             gap: handGap,
           }}
+          role="list"
+          aria-label="你的手牌"
         >
           {humanHand.map((card) => {
             const playable = playableIds.has(card.id);
@@ -982,6 +984,7 @@ function App() {
                 style={{
                   transform: !playable && isCurrentPlayer ? 'scale(0.92) brightness(0.7)' : undefined,
                 }}
+                role="listitem"
               >
                 <CardComponent
                   card={card}
@@ -996,6 +999,7 @@ function App() {
                   animate={false}
                   small={resp.isCompact}
                   minPx={cardMinPx}
+                  ariaLabel={`${card.rank} of ${card.suit}`}
                 />
               </div>
             );

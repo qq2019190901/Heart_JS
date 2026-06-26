@@ -34,7 +34,7 @@ function getRankDisplay(rank: number): string {
   }
 }
 
-function MiniCard({ card }: { card: Card }) {
+function MiniCard({ card, size }: { card: Card; size: number }) {
   const icon = SUIT_ICONS[card.suit];
   const color = SUIT_COLORS[card.suit];
   const rankDisplay = getRankDisplay(card.rank);
@@ -44,26 +44,26 @@ function MiniCard({ card }: { card: Card }) {
     <div
       className="flex-shrink-0 rounded-sm overflow-hidden"
       style={{
-        width: '28px',
-        height: '40px',
+        width: `${size}px`,
+        height: `${Math.round(size * 1.43)}px`,
         background: '#fff',
         border: '1px solid #ccc',
         boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
-        fontSize: '9px',
+        fontSize: `${Math.round(size * 0.32)}px`,
         lineHeight: '1',
       }}
     >
-      <div className="flex flex-col items-center h-full" style={{ padding: '1px 0' }}>
+      <div className="flex flex-col items-center h-full" style={{ padding: `${Math.round(size * 0.04)}px 0` }}>
         <div className="flex flex-col items-center leading-none">
-          <span style={{ color, fontWeight: 700, fontSize: '8px' }}>{rankDisplay}</span>
-          <span style={{ color, fontSize: '7px' }}>{icon}</span>
+          <span style={{ color, fontWeight: 700, fontSize: `${Math.round(size * 0.29)}px` }}>{rankDisplay}</span>
+          <span style={{ color, fontSize: `${Math.round(size * 0.25)}px` }}>{icon}</span>
         </div>
         <div className="flex-1 flex items-center justify-center">
-          <span style={{ color, fontSize: '10px' }}>{icon}</span>
+          <span style={{ color, fontSize: `${Math.round(size * 0.36)}px` }}>{icon}</span>
         </div>
         <div className="flex flex-col items-center leading-none rotate-180">
-          <span style={{ color, fontWeight: 700, fontSize: '8px' }}>{rankDisplay}</span>
-          <span style={{ color, fontSize: '7px' }}>{icon}</span>
+          <span style={{ color, fontWeight: 700, fontSize: `${Math.round(size * 0.29)}px` }}>{rankDisplay}</span>
+          <span style={{ color, fontSize: `${Math.round(size * 0.25)}px` }}>{icon}</span>
         </div>
       </div>
     </div>
@@ -89,31 +89,34 @@ const ScoreBoard: React.FC<ScoreBoardProps> = memo(({
   const sorted = [...players].sort((a, b) => a.score - b.score);
   const winner = sorted[0];
 
-  // Responsive sizing
-  const isCompact = minDim < 500;
-  const isVeryCompact = minDim < 400;
-  const modalPadding = isVeryCompact ? 'p-2' : isCompact ? 'p-3 sm:p-4' : 'p-4 sm:p-6';
-  const modalMaxWidth = isVeryCompact ? 'max-w-[95vw]' : isCompact ? 'max-w-sm' : 'max-w-md';
-  const titleSize = isVeryCompact ? 'text-base' : isCompact ? 'text-lg sm:text-xl' : 'text-xl sm:text-2xl';
-  const playerRowPadding = isCompact ? 'p-1.5 sm:p-2' : 'p-2 sm:p-3';
-  const playerRowGap = isCompact ? 'gap-1 sm:gap-2' : 'gap-2 sm:gap-3';
-  const playerNameSize = isVeryCompact ? 'text-[11px]' : isCompact ? 'text-xs sm:text-sm' : 'text-sm sm:text-base';
-  const scoreSize = isVeryCompact ? 'text-[10px]' : isCompact ? 'text-xs sm:text-sm' : 'text-sm sm:text-base';
-  const btnPadding = isVeryCompact ? 'py-1.5' : isCompact ? 'py-2' : 'py-2.5 sm:py-3';
-  const btnFontSize = isVeryCompact ? 'text-xs' : isCompact ? 'text-xs sm:text-sm' : 'text-sm sm:text-base';
-  const listGap = isVeryCompact ? 'space-y-1' : isCompact ? 'space-y-1.5 sm:space-y-2' : 'space-y-2 sm:space-y-3';
-  const footerSize = isVeryCompact ? 'text-[9px]' : isCompact ? 'text-[10px]' : 'text-xs';
+  // Unified responsive sizing
+  const isPhone = minDim < 450;
+  const isTablet = minDim >= 450 && minDim < 768;
+  const modalPadding = isPhone ? 'p-2' : isTablet ? 'p-3' : 'p-4 sm:p-6';
+  const modalMaxWidth = isPhone ? 'max-w-[95vw]' : isTablet ? 'max-w-sm' : 'max-w-md';
+  const titleSize = isPhone ? 'text-base' : isTablet ? 'text-lg sm:text-xl' : 'text-xl sm:text-2xl';
+  const playerNameSize = isPhone ? 'text-[11px]' : isTablet ? 'text-xs sm:text-sm' : 'text-sm sm:text-base';
+  const scoreSize = isPhone ? 'text-[10px]' : isTablet ? 'text-xs sm:text-sm' : 'text-sm sm:text-base';
+  const btnPadding = isPhone ? 'py-1.5' : isTablet ? 'py-2' : 'py-2.5 sm:py-3';
+  const btnFontSize = isPhone ? 'text-xs' : isTablet ? 'text-xs sm:text-sm' : 'text-sm sm:text-base';
+  const listGap = isPhone ? 'space-y-1' : isTablet ? 'space-y-1.5' : 'space-y-2 sm:space-y-3';
+  const footerSize = isPhone ? 'text-[9px]' : 'text-[10px] sm:text-xs';
+  // Mini card size: 20px on phone, 24px tablet, 28px desktop
+  const miniCardSize = isPhone ? 20 : isTablet ? 24 : 28;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-1 sm:p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
       <div
         className={`relative z-10 rounded-2xl ${modalPadding} w-full ${modalMaxWidth}`}
         style={{
           background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+          boxShadow: 'var(--shadow-table, 0 20px 60px rgba(0,0,0,0.5))',
         }}
+        role="dialog"
+        aria-label={showSummary ? '游戏结束' : `第 ${roundNumber} 回合结束`}
+        aria-modal="true"
       >
         <h2 className={`${titleSize} font-bold text-white text-center mb-2 sm:mb-3 sm:mb-4`}>
           {showSummary ? '游戏结束!' : `第 ${roundNumber} 回合结束`}
@@ -131,9 +134,10 @@ const ScoreBoard: React.FC<ScoreBoardProps> = memo(({
                   background: idx === 0 ? 'rgba(46,204,113,0.2)' : 'rgba(255,255,255,0.05)',
                   border: idx === 0 ? '1px solid rgba(46,204,113,0.3)' : '1px solid rgba(255,255,255,0.1)',
                 }}
+                aria-label={`${player.name} ${idx === 0 ? '获胜' : `第 ${idx + 1} 名`} 得分 ${player.score}`}
               >
-                <div className={`flex items-center ${playerRowGap} ${playerRowPadding}`}>
-                  <span className={`text-sm sm:text-base ${isVeryCompact ? 'text-base' : ''}`}>
+                <div className="flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 sm:p-3">
+                  <span className={`text-sm sm:text-base ${isPhone ? 'text-base' : ''}`}>
                     {idx === 0 ? '👑' : `#${idx + 1}`}
                   </span>
                   <span className={`text-white flex-1 font-medium truncate ${playerNameSize}`}>
@@ -146,7 +150,7 @@ const ScoreBoard: React.FC<ScoreBoardProps> = memo(({
                 {wonCards.length > 0 && (
                   <div className={`px-1.5 pb-1.5 sm:px-2 sm:pb-2 flex flex-wrap gap-0.5 sm:gap-1`}>
                     {wonCards.map((card, ci) => (
-                      <MiniCard key={ci} card={card} />
+                      <MiniCard key={ci} card={card} size={miniCardSize} />
                     ))}
                   </div>
                 )}
@@ -170,6 +174,7 @@ const ScoreBoard: React.FC<ScoreBoardProps> = memo(({
                 background: 'linear-gradient(135deg, #2ecc71, #27ae60)',
               }}
               onClick={onRestart}
+              aria-label="重新开始游戏"
             >
               重新开始
             </button>
@@ -180,6 +185,7 @@ const ScoreBoard: React.FC<ScoreBoardProps> = memo(({
                 background: 'rgba(255,255,255,0.1)',
               }}
               onClick={onContinue}
+              aria-label="继续下一回合"
             >
               下一回合
             </button>

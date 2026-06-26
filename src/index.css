@@ -9,13 +9,58 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   -webkit-text-size-adjust: 100%;
+
+  /* ═══════════════════════════════════════
+     Design Tokens — Colors
+     ═══════════════════════════════════════ */
+  --color-felt-dark: #094a20;
+  --color-felt-mid: #0d6e38;
+  --color-felt-light: #1a8a4a;
+  --color-border-amber: #8b6914;
+  --color-border-amber-alpha: rgba(139, 105, 20, 0.6);
+  --color-bg-gradient-start: #0d5e28;
+  --color-bg-gradient-end: #094a20;
+  --color-card-face-down-top: #1a5276;
+  --color-card-face-down-mid: #2e86c1;
+  --color-badge-amber: rgba(251, 191, 36, 0.9);
+  --color-badge-amber-shadow: rgba(251, 191, 36, 0.3);
+  --color-badge-blue: rgba(59, 130, 246, 0.8);
+  --color-badge-black-alpha: rgba(0, 0, 0, 0.4);
+  --color-score-tag: rgba(0, 0, 0, 0.4);
+  --color-score-text: rgba(255, 255, 255, 0.6);
+
+  /* ═══════════════════════════════════════
+     Design Tokens — Spacing Scale
+     ═══════════════════════════════════════ */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+
+  /* ═══════════════════════════════════════
+     Design Tokens — Border Radius
+     ═══════════════════════════════════════ */
+  --radius-card: 8px;
+  --radius-badge: 9999px;
+  --radius-modal: 16px;
+
+  /* ═══════════════════════════════════════
+     Design Tokens — Shadows
+     ═══════════════════════════════════════ */
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-card-hover: 0 6px 20px rgba(0, 0, 0, 0.3);
+  --shadow-card-selected: 0 8px 25px rgba(46, 204, 113, 0.4);
+  --shadow-badge: 0 4px 12px rgba(0, 0, 0, 0.15);
+  --shadow-table: 0 20px 60px rgba(0, 0, 0, 0.4);
 }
 
 html, body, #root {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background: #0d5e28;
+  background: var(--color-bg-gradient-start);
   height: 100%;
   height: 100dvh;
   touch-action: manipulation;
@@ -54,4 +99,19 @@ html, body, #root {
   .card-snap {
     transition: transform 0.15s ease-out;
   }
+}
+
+/* Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Focus visible styles for keyboard navigation */
+:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.8);
+  outline-offset: 2px;
 }

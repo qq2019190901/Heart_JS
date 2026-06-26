@@ -36,17 +36,17 @@ const Menu: React.FC<MenuProps> = memo(({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const isCompact = minDim < 500;
-  const isVeryCompact = minDim < 400;
+  const isPhone = minDim < 450;
+  const isTablet = minDim >= 450 && minDim < 768;
 
-  const btnSizeClass = isVeryCompact ? 'py-2 text-sm' : isCompact ? 'py-2.5 text-sm sm:text-base' : 'py-3 text-base sm:text-lg';
-  const btnSubSize = isCompact ? 'text-[9px]' : 'text-[10px] sm:text-xs';
-  const titleSize = isVeryCompact ? 'text-2xl sm:text-3xl' : isCompact ? 'text-3xl sm:text-4xl md:text-5xl' : 'text-4xl sm:text-5xl md:text-7xl';
-  const subtitleSize = isVeryCompact ? 'text-[9px]' : isCompact ? 'text-xs sm:text-sm' : 'text-sm sm:text-lg md:text-xl';
-  const buttonWidth = isCompact ? 'w-44 sm:w-52' : 'w-52 sm:w-64';
-  const lanPanelWidth = isCompact ? 'w-64 sm:w-72' : 'w-72 sm:w-80';
-  const inputSize = isVeryCompact ? 'text-xs py-1.5 px-2' : isCompact ? 'text-sm py-2 px-3' : 'text-sm py-2 px-3';
-  const labelSize = isVeryCompact ? 'text-[9px]' : isCompact ? 'text-xs' : 'text-xs';
+  const btnSizeClass = isPhone ? 'py-2 text-sm' : isTablet ? 'py-2.5 text-sm sm:text-base' : 'py-3 text-base sm:text-lg';
+  const btnSubSize = isPhone ? 'text-[9px]' : 'text-[10px] sm:text-xs';
+  const titleSize = isPhone ? 'text-2xl sm:text-3xl' : isTablet ? 'text-3xl sm:text-4xl md:text-5xl' : 'text-4xl sm:text-5xl md:text-7xl';
+  const subtitleSize = isPhone ? 'text-[9px]' : isTablet ? 'text-xs sm:text-sm' : 'text-sm sm:text-lg md:text-xl';
+  const buttonWidth = isPhone ? 'w-44 sm:w-52' : 'w-52 sm:w-64';
+  const lanPanelWidth = isPhone ? 'w-64 sm:w-72' : 'w-72 sm:w-80';
+  const inputSize = isPhone ? 'text-xs py-1.5 px-2' : isTablet ? 'text-sm py-2 px-3' : 'text-sm py-2 px-3';
+  const labelSize = isPhone ? 'text-[9px]' : 'text-xs';
 
   const handleJoin = () => {
     if (joinRoomCode.trim().length >= 3) {
@@ -72,7 +72,7 @@ const Menu: React.FC<MenuProps> = memo(({
           style={{
             left: `${15 + i * 15}%`,
             top: `${10 + (i % 3) * 25}%`,
-            fontSize: isVeryCompact ? '1.5rem' : isCompact ? '2rem' : '3rem',
+            fontSize: isPhone ? '1.5rem' : isTablet ? '2rem' : '3rem',
           }}
           animate={{
             y: [0, -15, 0],
@@ -217,7 +217,7 @@ const Menu: React.FC<MenuProps> = memo(({
 
       {/* Rules toggle */}
       <motion.button
-        className={`mt-2 sm:mt-4 text-white/40 hover:text-white/70 transition-colors z-10 ${isVeryCompact ? 'text-[9px]' : isCompact ? 'text-xs' : 'text-xs sm:text-sm'}`}
+        className={`mt-2 sm:mt-4 text-white/40 hover:text-white/70 transition-colors z-10 ${isPhone ? 'text-[9px]' : isTablet ? 'text-xs' : 'text-xs sm:text-sm'}`}
         onClick={() => setMenuOpen(!menuOpen)}
         whileHover={{ scale: 1.05 }}
       >
@@ -226,7 +226,7 @@ const Menu: React.FC<MenuProps> = memo(({
 
       {menuOpen && (
         <motion.div
-          className={`mt-2 sm:mt-3 mx-3 sm:mx-4 p-3 sm:p-4 rounded-xl max-w-sm z-10 ${isVeryCompact ? 'text-[9px]' : isCompact ? 'text-xs' : 'text-xs sm:text-sm'} leading-relaxed text-white/70`}
+          className={`mt-2 sm:mt-3 mx-3 sm:mx-4 p-3 sm:p-4 rounded-xl max-w-sm z-10 ${isPhone ? 'text-[9px]' : isTablet ? 'text-xs' : 'text-xs sm:text-sm'} leading-relaxed text-white/70`}
           style={{ background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(10px)' }}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

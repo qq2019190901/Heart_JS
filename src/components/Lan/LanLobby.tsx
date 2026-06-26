@@ -31,8 +31,8 @@ const LanLobby: React.FC<LanLobbyProps> = memo(({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const isCompact = minDim < 500;
-  const isVeryCompact = minDim < 400;
+  const isPhone = minDim < 450;
+  const isTablet = minDim >= 450 && minDim < 768;
 
   const handleCopyRoomCode = () => {
     navigator.clipboard.writeText(roomId).then(() => {
@@ -41,12 +41,12 @@ const LanLobby: React.FC<LanLobbyProps> = memo(({
     });
   };
 
-  const containerPadding = isVeryCompact ? 'p-2' : isCompact ? 'p-3 sm:p-4' : 'p-4 sm:p-6';
-  const containerMaxWidth = isVeryCompact ? 'max-w-[95vw]' : 'max-w-md';
-  const titleSize = isVeryCompact ? 'text-base' : isCompact ? 'text-lg' : 'text-xl';
-  const subtitleSize = isVeryCompact ? 'text-[10px]' : isCompact ? 'text-xs' : 'text-sm';
-  const labelSize = isVeryCompact ? 'text-[9px]' : 'text-xs';
-  const roomCodeSize = isVeryCompact ? 'text-2xl' : 'text-3xl';
+  const containerPadding = isPhone ? 'p-2' : isTablet ? 'p-3 sm:p-4' : 'p-4 sm:p-6';
+  const containerMaxWidth = isPhone ? 'max-w-[95vw]' : 'max-w-md';
+  const titleSize = isPhone ? 'text-base' : isTablet ? 'text-lg' : 'text-xl';
+  const subtitleSize = isPhone ? 'text-[10px]' : isTablet ? 'text-xs' : 'text-sm';
+  const labelSize = isPhone ? 'text-[9px]' : 'text-xs';
+  const roomCodeSize = isPhone ? 'text-2xl' : 'text-3xl';
   const playerItemPadding = isCompact ? 'px-2 py-1' : 'px-3 py-2';
   const playerNameSize = isVeryCompact ? 'text-[11px]' : isCompact ? 'text-xs' : 'text-sm';
   const metaSize = isVeryCompact ? 'text-[9px]' : 'text-xs';
