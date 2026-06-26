@@ -34,15 +34,16 @@ const Table: React.FC<TableProps> = memo(({
 
   // Responsive table sizing: fill available space on wide screens
   // Table needs room for: AI hands outside (top ~13 cards * ~22px, sides ~13 cards * ~28px)
-  // + player hand below (~130px) + margins
-  const TABLE_MARGIN = 180; // space for AI hands + player hand + badges
+  // + player hand below (~130px) + badges
+  const TABLE_MARGIN = 180;
   const availW = dims.vw - TABLE_MARGIN;
   const availH = dims.vh - TABLE_MARGIN;
 
-  // Target a square-ish table that fills the available space
-  const tableSide = Math.min(availW, availH * 1.1);
-  const tableWidth = `min(${Math.round(tableSide)}px, ${availW}px, 95vw)`;
-  const tableHeight = `min(${Math.round(tableSide * 0.85)}px, ${availH}px, 85vh)`;
+  // On wide screens, stretch table horizontally: width based on height ratio, capped by availW
+  // The table should be wider than tall so left/right badges are near edges
+  const idealWidth = Math.min(availW, availH * 1.6);
+  const tableWidth = `${Math.round(idealWidth)}px`;
+  const tableHeight = `min(${availH}px, 85vh)`;
 
   // Trick card offset
   const trickOffset = dims.minDim < 450 ? 14 : dims.minDim < 600 ? 20 : 28;
@@ -188,9 +189,9 @@ function getBadgeStyle(idx: number, _wide: boolean): React.CSSProperties {
 
 function getAiCardsAbsolutePosition(idx: number): string {
   switch (idx) {
-    case 1: return 'absolute left-[-70px] top-1/2 -translate-y-1/2 flex flex-col z-10';
+    case 1: return 'absolute left-[-60px] top-1/2 -translate-y-1/2 flex flex-col z-10';
     case 2: return 'absolute top-[-110px] left-1/2 -translate-x-1/2 flex flex-row z-10';
-    case 3: return 'absolute right-[-60px] top-1/2 -translate-y-1/2 flex flex-col z-10';
+    case 3: return 'absolute right-[-50px] top-1/2 -translate-y-1/2 flex flex-col z-10';
     default: return '';
   }
 }
