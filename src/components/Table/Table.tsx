@@ -42,7 +42,7 @@ const Table: React.FC<TableProps> = memo(({
   // Neither dimension depends on the other — each adapts to its own constraint.
 
   // Width: viewport minus side margins (AI hands outside + badge clearance)
-  const SIDE_MARGIN = 160; // ~70px AI hand + ~40px badge + ~50px buffer each side
+  const SIDE_MARGIN = 170; // ~70px AI hand + ~40px badge + ~60px buffer each side
   const tableWidth = `min(calc(100vw - ${SIDE_MARGIN}px), 95vw)`;
 
   // Height: viewport minus top/bottom margins (AI hand + player hand + badges)
