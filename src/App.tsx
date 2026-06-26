@@ -12,6 +12,7 @@ import { getAiPlayDecision } from './game/ai-turn';
 import { heartsAreBroken, canPlayCard, getAllPlayableCards } from './game/rules';
 import { wsManager } from './multiplayer/websocket';
 import { useBreakpoint } from './hooks/useBreakpoint';
+import { useResponsive } from './hooks/useResponsive';
 import { lanPeer, LanPeerManager } from './network/lan-peer';
 import { roomManager } from './network/room-manager';
 
@@ -35,6 +36,7 @@ function App() {
   const trickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const gameStateRef = useRef<GameState | null>(null);
   const isMobile = useBreakpoint(768);
+  const resp = useResponsive();
 
   // LAN state
   const [lanRoomCode, setLanRoomCode] = useState('');
@@ -785,47 +787,76 @@ function App() {
     const passLabel = passDir === 'left' ? '← 左侧玩家' : passDir === 'right' ? '→ 右侧玩家' : passDir === 'across' ? '↑ 对面玩家' : '无';
     const selectedArr = humanHand.filter(c => selectedPassCardIds.has(c.id));
 
+    // Responsive passing phase
+    const passCardMinPx = resp.isVeryCompact ? 28 : resp.isCompact ? 36 : 48;
+    const sectionGap = resp.isVeryCompact ? '8px' : resp.isCompact ? '12px' : '24px';
+    const titleSize = resp.isVeryCompact ? 'text-base' : resp.isCompact ? 'text-xl' : 'text-2xl';
+    const bodySize = resp.isVeryCompact ? 'text-[10px]' : resp.isCompact ? 'text-xs' : 'text-sm';
+    const btnFontSize = resp.isVeryCompact ? 'text-xs' : resp.isCompact ? 'text-sm' : 'text-base';
+    const confirmBtnPadding = resp.isVeryCompact ? 'px-3 py-1.5' : resp.isCompact ? 'px-5 py-2' : 'px-6 py-2.5';
+
     return (
       <div className="min-h-screen min-h-dvh flex flex-col overflow-hidden" style={{
         background: 'linear-gradient(180deg, #0d5e28 0%, #094a20 100%)',
       }}>
-        <div className="flex items-center justify-between px-3 py-1.5 bg-black/0 shrink-0 fixed top-0 left-0 right-0 z-50">
-          <button className="text-white/60 text-sm hover:text-white transition-colors" onClick={() => setMode(null)}>← 菜单</button>
-          <div className="text-white/50 text-xs font-medium">第 {gameState.roundNumber} 回合 — 传牌阶段</div>
+        {/* Top bar */}
+        <div className="flex items-center justify-between px-2 py-1 sm:px-3 sm:py-1.5 bg-black/0 shrink-0 fixed top-0 left-0 right-0 z-50">
+          <button
+            className="text-white/60 hover:text-white transition-colors"
+            style={resp.isCompact ? { fontSize: '11px' } : {}}
+            onClick={() => setMode(null)}
+          >
+            ← 菜单
+          </button>
+          <div
+            className="text-white/50 font-medium"
+            style={resp.isVeryCompact ? { fontSize: '10px' } : resp.isCompact ? { fontSize: '11px' } : {}}
+          >
+            第 {gameState.roundNumber} 回合 — 传牌阶段
+          </div>
         </div>
 
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 sm:gap-6 px-4 min-h-0">
+        {/* Main content */}
+        <div className="flex-1 flex flex-col items-center justify-center gap-3 sm:gap-4 px-2 min-h-0"
+          style={{ gap: sectionGap }}>
+          {/* Title */}
           <div className="text-center">
-            <h2 className="text-white text-lg sm:text-2xl font-bold mb-1">传牌阶段</h2>
-            <p className="text-white/70 text-xs sm:text-sm">
+            <h2 className={`text-white font-bold mb-0.5 ${titleSize}`}>传牌阶段</h2>
+            <p className={`text-white/70 ${bodySize}`}>
               向 <span className="text-yellow-300 font-semibold">{passLabel}</span> 选择 {maxPass} 张牌
             </p>
           </div>
 
+          {/* Waiting for others */}
           {mode === 'lan' && (lanClientSentPass || lanPassSending) ? (
-            <div className="text-center py-8">
-              <div className="text-white/70 text-lg font-semibold">
+            <div className="text-center py-4 sm:py-8">
+              <div className={`text-white/70 font-semibold ${resp.isVeryCompact ? 'text-base' : 'text-lg'}`}>
                 {lanPassSending ? '已传递，等待其他玩家...' : '已传递，等待其他玩家...'}
               </div>
             </div>
           ) : (
             <>
+              {/* Selected cards preview */}
               {selectedArr.length > 0 ? (
-                <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
+                <div className="flex flex-wrap justify-center gap-1 sm:gap-2 px-2">
                   {selectedArr.map((card) => (
                     <div key={card.id} className="relative cursor-pointer" onClick={() => togglePassCard(card.id)}>
-                      <CardComponent card={card} small />
-                      <div className="absolute -top-2 -right-2 bg-red-500 text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold shadow-md">✕</div>
+                      <CardComponent card={card} small minPx={passCardMinPx} />
+                      <div className="absolute -top-1.5 -right-1.5 sm:-top-2 sm:-right-2 bg-red-500 text-white text-[8px] sm:text-[10px] w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center font-bold shadow-md">✕</div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-white/50 text-sm italic">请选择要传递的牌</div>
+                <div className={`text-white/50 italic ${bodySize}`}>请选择要传递的牌</div>
               )}
 
-              <div className="w-full max-w-lg">
-                <div className="text-white/50 text-xs text-center mb-2">你的手牌（点击选择）</div>
-                <div className="flex items-end justify-center gap-0.5 flex-wrap" style={{ maxHeight: 'clamp(120px, 40dvh, 250px)' }}>
+              {/* Hand */}
+              <div className="w-full max-w-lg px-1">
+                <div className={`text-white/50 text-center mb-1 ${bodySize}`}>你的手牌（点击选择）</div>
+                <div
+                  className="flex items-end justify-center gap-0.5 flex-wrap"
+                  style={{ maxHeight: `clamp(100px, 40dvh, ${resp.isVeryCompact ? '140px' : '250px'})` }}
+                >
                   {humanHand.map((card, idx) => {
                     const isSelected = selectedPassCardIds.has(card.id);
                     return (
@@ -834,22 +865,23 @@ function App() {
                         className={`transition-all duration-200 ${isSelected ? 'opacity-50' : ''}`}
                         style={{
                           transform: isSelected ? 'scale(0.9)' : undefined,
-                          marginLeft: idx > 0 ? -8 : 0,
+                          marginLeft: idx > 0 ? -6 : 0,
                           cursor: isSelected || selectedPassCardIds.size < maxPass ? 'pointer' : 'default',
                         }}
                         onClick={() => togglePassCard(card.id)}
                       >
-                        <CardComponent card={card} small />
+                        <CardComponent card={card} small minPx={passCardMinPx} />
                       </div>
                     );
                   })}
                 </div>
               </div>
 
+              {/* Confirm button */}
               <button
                 onClick={handlePassConfirm}
                 disabled={selectedPassCardIds.size !== maxPass}
-                className={`px-6 py-2.5 font-bold rounded-lg transition-colors text-sm sm:text-base shadow-lg ${
+                className={`font-bold rounded-lg transition-colors shadow-lg ${confirmBtnPadding} ${btnFontSize} ${
                   selectedPassCardIds.size === maxPass
                     ? 'bg-yellow-500 hover:bg-yellow-400 text-gray-900'
                     : 'bg-gray-400 text-gray-200 cursor-not-allowed'
@@ -871,18 +903,36 @@ function App() {
     getAllPlayableCards(humanHand, gameState.currentTrick, heartsAreBroken(gameState.hands, gameState.highestHeart)).map(c => c.id)
   );
 
+  // Responsive hand layout
+  const handGap = resp.isVeryCompact ? -4 : resp.isCompact ? -8 : undefined;
+  const handMaxH = resp.vh < 500 ? '120px' : resp.vh < 700 ? '150px' : '200px';
+  const topBarFontSize = resp.isVeryCompact ? '11px' : resp.isCompact ? '12px' : '';
+  const statusFontSize = resp.isVeryCompact ? '10px' : resp.isCompact ? '12px' : '';
+  const cardMinPx = resp.isVeryCompact ? 30 : resp.isCompact ? 40 : 48;
+
   return (
     <div className="relative w-full h-full flex flex-col" style={{
       background: 'linear-gradient(180deg, #0d5e28 0%, #094a20 100%)',
     }}>
-      <div className="flex items-center justify-between px-4 py-2 bg-black/0 shrink-0 fixed top-0 left-0 right-0 z-50">
-        <button className="text-white/60 text-sm hover:text-white transition-colors" onClick={() => setMode(null)}>← 菜单</button>
-        <div className="text-white/70 text-sm font-medium">
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-3 py-1.5 sm:px-4 sm:py-2 bg-black/0 shrink-0 fixed top-0 left-0 right-0 z-50">
+        <button
+          className="text-white/60 hover:text-white transition-colors"
+          style={topBarFontSize ? { fontSize: topBarFontSize } : {}}
+          onClick={() => setMode(null)}
+        >
+          ← 菜单
+        </button>
+        <div
+          className="text-white/70 font-medium"
+          style={topBarFontSize ? { fontSize: topBarFontSize } : {}}
+        >
           {mode === 'lan' ? `LAN · ${lanRoomCode}` : `第 ${gameState.roundNumber} 回合`}
         </div>
       </div>
 
-      <div className="flex-1 flex items-center justify-center p-2 sm:p-4 min-h-0 overflow-hidden">
+      {/* Table area */}
+      <div className="flex-1 flex items-center justify-center p-1 sm:p-4 min-h-0 overflow-hidden">
         <Table
           trick={gameState.currentTrick}
           currentPlayerId={gameState.currentPlayerId}
@@ -894,21 +944,32 @@ function App() {
         />
       </div>
 
-      <div className="shrink-0 flex flex-col items-center px-2 sm:px-4 pb-3 pt-2">
-        <div className="h-6 flex items-center justify-center shrink-0 w-full mb-1">
+      {/* Bottom: status + hand */}
+      <div className="shrink-0 flex flex-col items-center px-1 sm:px-4 pb-2 sm:pb-3 pt-2">
+        {/* Turn status */}
+        <div
+          className="h-5 sm:h-6 flex items-center justify-center shrink-0 w-full mb-0.5 sm:mb-1"
+          style={{ fontSize: statusFontSize }}
+        >
           {gameState.currentPlayerId === humanId && !waitingForAi && (
-            <div className="text-green-300 text-sm animate-pulse font-semibold">轮到你了！</div>
+            <div className="text-green-300 animate-pulse font-semibold">轮到你了！</div>
           )}
-          {waitingForAi && <div className="text-white/50 text-sm">AI 思考中...</div>}
+          {waitingForAi && <div className="text-white/50">AI 思考中...</div>}
           {!waitingForAi && gameState.currentPlayerId !== humanId && (
-            <div className="text-white/40 text-sm">
+            <div className="text-white/40">
               {gameState.players.find(p => p.id === gameState.currentPlayerId)?.name || ''} 的回合
             </div>
           )}
         </div>
 
-        <div className="flex items-center justify-center flex-wrap gap-1 px-1 sm:px-2"
-          style={{ maxHeight: isMobile ? '160px' : '200px' }}>
+        {/* Player hand */}
+        <div
+          className="flex items-end justify-center flex-wrap gap-0.5 sm:gap-1 px-1 sm:px-2"
+          style={{
+            maxHeight: handMaxH,
+            gap: handGap,
+          }}
+        >
           {humanHand.map((card) => {
             const playable = playableIds.has(card.id);
             const isCurrentPlayer = gameState.currentPlayerId === humanId;
@@ -917,7 +978,6 @@ function App() {
                 key={card.id}
                 className="transition-transform duration-150"
                 style={{
-                  marginLeft: isMobile ? '-12px' : undefined,
                   transform: !playable && isCurrentPlayer ? 'scale(0.92) brightness(0.7)' : undefined,
                 }}
               >
@@ -932,7 +992,8 @@ function App() {
                   }}
                   disabled={!isCurrentPlayer || waitingForAi || (!playable && isCurrentPlayer)}
                   animate={false}
-                  small={isMobile}
+                  small={resp.isCompact}
+                  minPx={cardMinPx}
                 />
               </div>
             );

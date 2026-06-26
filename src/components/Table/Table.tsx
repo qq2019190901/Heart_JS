@@ -14,17 +14,35 @@ const Table: React.FC<TableProps> = memo(({
   trick, currentPlayerId, humanPlayerId, players, aiHands = new Map(),
 }) => {
   const [isWide, setIsWide] = useState(false);
+  const [minDim, setMinDim] = useState(Math.min(window.innerWidth, window.innerHeight));
 
   useEffect(() => {
-    const check = () => setIsWide(window.innerWidth >= 1024);
+    const check = () => {
+      setIsWide(window.innerWidth >= 1024);
+      setMinDim(Math.min(window.innerWidth, window.innerHeight));
+    };
     check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // Mobile portrait: compact table
-  const tableWidth = isWide ? 'min(75vw, 900px)' : 'min(96vw, 480px)';
-  const tableHeight = isWide ? 'min(70vh, 600px)' : 'min(55vh, 420px)';
+  // Responsive table sizing based on viewport
+  const tableWidth = isWide
+    ? `min(75vw, 900px, calc(100vh * 1.2))`
+    : `min(96vw, ${Math.round(minDim * 1.1)}px)`;
+  const tableHeight = isWide
+    ? `min(70vh, 600px)`
+    : `min(55vh, ${Math.round(minDim * 0.7)}px)`;
+
+  // Trick card offset scales with table size
+  const trickOffset = isWide ? 28 : 18;
+
+  // Badge font scales with dimension
+  const badgeFontSize = minDim < 450 ? '10px' : minDim < 600 ? '11px' : '';
+  const scoreFontSize = minDim < 450 ? '9px' : minDim < 600 ? '10px' : '';
+
+  // AI card size floor
+  const aiCardMinPx = minDim < 450 ? 28 : minDim < 600 ? 36 : 48;
 
   return (
     <div className="relative w-full h-full flex items-center justify-center">
@@ -48,7 +66,6 @@ const Table: React.FC<TableProps> = memo(({
         {isWide && players.map((player, idx) => {
           if (!player.isAi) return null;
           const aiCards = (aiHands instanceof Map ? aiHands.get(player.id) : undefined) || [];
-          // Default to showing 13 cards per AI when hands map doesn't have the player
           const displayCount = aiCards.length > 0 ? aiCards.length : 13;
           return (
             <div key={`ai-cards-${player.id}`} className={getAiCardsAbsolutePosition(idx)}>
@@ -58,6 +75,7 @@ const Table: React.FC<TableProps> = memo(({
                     card={{ suit: 'spades' as any, rank: 2 as any, id: `${player.id}-${ci}` }}
                     faceDown
                     small
+                    minPx={aiCardMinPx}
                     animate={false}
                   />
                 </div>
@@ -86,10 +104,16 @@ const Table: React.FC<TableProps> = memo(({
                       ? 'bg-blue-500/80 text-white'
                       : 'bg-black/40 text-white/80'
                 }`}
+                style={badgeFontSize ? { fontSize: badgeFontSize } : undefined}
               >
                 {isHuman ? '你' : player.name}
-                {isActive && <span className="ml-1 animate-pulse">●</span>}
-                <span className="text-white/60 text-xs bg-black/40 px-1.5 py-0.5 sm:px-2 sm:py-0.5 rounded-full">{player.score} 分</span>
+                {isActive && <span className="ml-1 animate-pulse">&#9679;</span>}
+                <span
+                  className="text-white/60 bg-black/40 px-1.5 py-0.5 sm:px-2 sm:py-0.5 rounded-full"
+                  style={scoreFontSize ? { fontSize: scoreFontSize } : undefined}
+                >
+                  {player.score} 分
+                </span>
               </div>
             </div>
           );
@@ -100,9 +124,8 @@ const Table: React.FC<TableProps> = memo(({
           <div className="absolute inset-0">
             {trick.cards.map((play, idx) => {
               const playerIdx = players.findIndex(p => p.id === play.playerId);
-              const offset = isWide ? 28 : 18 + idx * 3;
+              const offset = trickOffset + idx * 3;
 
-              // Use CSS transform for positioning (GPU accelerated)
               let transform = 'translate(-50%, -50%)';
               switch (playerIdx) {
                 case 0: transform += ` translateY(${offset}px)`; break;
@@ -123,7 +146,7 @@ const Table: React.FC<TableProps> = memo(({
                     transition: 'transform 0.3s ease-out',
                   }}
                 >
-                  <CardComponent card={play.card} faceDown={false} small />
+                  <CardComponent card={play.card} faceDown={false} small minPx={aiCardMinPx} />
                 </div>
               );
             })}
@@ -163,12 +186,7 @@ function getAiCardsAbsolutePosition(idx: number): string {
 }
 
 function getAiCardWrapper(idx: number): string {
-  switch (idx) {
-    case 1:
-    case 3: return 'w-7 h-10 -ml-1';
-    case 2: return 'w-7 h-10 -ml-1';
-    default: return 'w-7 h-10 -ml-1';
-  }
+  return 'w-7 h-10 -ml-1';
 }
 
 Table.displayName = 'Table';

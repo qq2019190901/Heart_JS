@@ -7,7 +7,10 @@ interface CardComponentProps {
   faceDown?: boolean;
   selected?: boolean;
   disabled?: boolean;
+  /** Extra-small size for AI hands, trick area, pass selection */
   small?: boolean;
+  /** Minimum size floor in pixels (for very compact screens) */
+  minPx?: number;
   animate?: boolean;
 }
 
@@ -39,6 +42,7 @@ const CardComponent: React.FC<CardComponentProps> = memo(({
   selected = false,
   disabled = false,
   small = false,
+  minPx = 48,
   animate = true,
 }) => {
   const [hovered, setHovered] = useState(false);
@@ -46,23 +50,34 @@ const CardComponent: React.FC<CardComponentProps> = memo(({
   const color = SUIT_COLORS[card.suit];
   const rankDisplay = getRankDisplay(card.rank);
 
-  const w = small ? 'w-10 sm:w-14 md:w-16' : 'w-14 sm:w-18 md:w-20';
-  const h = small ? 'h-14 sm:h-20 md:h-24' : 'h-20 sm:h-28 md:h-32';
+  // Dynamic card dimensions using clamp for smooth scaling
+  // Normal card: width clamp(48px, 14vw, 80px), height proportional
+  // Small card: width clamp(32px, 8vw, 56px), height proportional
+  const cardW = small
+    ? `clamp(${minPx}px, 8vw, 56px)`
+    : `clamp(${minPx + 16}px, 14vw, 80px)`;
+  const cardH = small
+    ? `clamp(${Math.round(minPx * 1.4)}px, 11.2vw, 78px)`
+    : `clamp(${Math.round((minPx + 16) * 1.4)}px, 19.6vw, 112px)`;
 
-  // Standard playing card pip layout
+  // Corner text sizes scale proportionally
+  const cornerFontSize = small
+    ? `clamp(${Math.round(minPx * 0.17)}px, 2.5vw, 13px)`
+    : `clamp(${Math.round((minPx + 16) * 0.17)}px, 3vw, 14px)`;
+  const suitFontSize = small
+    ? `clamp(${Math.round(minPx * 0.12)}px, 1.8vw, 10px)`
+    : `clamp(${Math.round((minPx + 16) * 0.12)}px, 2.2vw, 12px)`;
+
+  // Center pip sizes
   const pipLayout = getPipLayout(card.rank);
-  const pipSize = getPipSize(card.rank, small);
+  const pipSize = getPipSize(card.rank, small, minPx);
 
-  // Pre-computed classes to avoid runtime string concat
   const classes = [
-    w,
-    h,
     'rounded-lg cursor-pointer select-none relative flex-shrink-0',
     selected ? 'ring-2 ring-green-400 ring-offset-2 ring-offset-emerald-800' : '',
     disabled ? 'cursor-not-allowed' : '',
   ].filter(Boolean).join(' ');
 
-  // Pre-computed box-shadow values
   let boxShadow = '0 2px 8px rgba(0,0,0,0.2)';
   if (selected) boxShadow = '0 8px 25px rgba(46,204,113,0.4)';
   else if (hovered && !disabled) boxShadow = '0 6px 20px rgba(0,0,0,0.3)';
@@ -71,6 +86,8 @@ const CardComponent: React.FC<CardComponentProps> = memo(({
     <div
       className={classes}
       style={{
+        width: cardW,
+        height: cardH,
         backgroundColor: faceDown ? '#1a5276' : 'white',
         boxShadow,
         transform: hovered && !disabled && !faceDown ? 'translateY(-8px) scale(1.05)' : undefined,
@@ -90,16 +107,22 @@ const CardComponent: React.FC<CardComponentProps> = memo(({
             background: 'linear-gradient(135deg, #1a5276 0%, #2e86c1 50%, #1a5276 100%)',
           }}
         >
-          <div className="w-8 h-10 rounded border border-white/20 flex items-center justify-center">
-            <span className="text-white/40 text-lg">♥</span>
+          <div
+            className="w-8 h-10 rounded border border-white/20 flex items-center justify-center"
+            style={{
+              width: `clamp(24px, 5vw, 36px)`,
+              height: `clamp(30px, 6vw, 44px)`,
+            }}
+          >
+            <span className="text-white/40">♥</span>
           </div>
         </div>
       ) : (
         <>
           {/* Top-left corner */}
           <div className="absolute top-[3%] left-[5%] flex flex-col items-center">
-            <span className="font-bold leading-none" style={{ color, fontSize: small ? '9px' : '11px' }}>{rankDisplay}</span>
-            <span className="leading-none" style={{ color, fontSize: small ? '6px' : '8px' }}>{icon}</span>
+            <span className="font-bold leading-none" style={{ color, fontSize: cornerFontSize }}>{rankDisplay}</span>
+            <span className="leading-none" style={{ color, fontSize: suitFontSize }}>{icon}</span>
           </div>
 
           {/* Center pips */}
@@ -128,8 +151,8 @@ const CardComponent: React.FC<CardComponentProps> = memo(({
 
           {/* Bottom-right corner (rotated) */}
           <div className="absolute bottom-[3%] right-[5%] flex flex-col items-center rotate-180">
-            <span className="font-bold leading-none" style={{ color, fontSize: small ? '9px' : '11px' }}>{rankDisplay}</span>
-            <span className="leading-none" style={{ color, fontSize: small ? '6px' : '8px' }}>{icon}</span>
+            <span className="font-bold leading-none" style={{ color, fontSize: cornerFontSize }}>{rankDisplay}</span>
+            <span className="leading-none" style={{ color, fontSize: suitFontSize }}>{icon}</span>
           </div>
 
           {/* Hover gloss */}
@@ -170,33 +193,24 @@ function getPipLayout(rank: number): { x: number; y: number }[] {
       return [{ x: 25, y: 14 }, { x: 75, y: 14 }, { x: 50, y: 26 }, { x: 25, y: 44 }, { x: 75, y: 44 }, { x: 50, y: 56 }, { x: 25, y: 74 }, { x: 75, y: 74 }, { x: 50, y: 86 }];
     case 10:
       return [{ x: 25, y: 12 }, { x: 75, y: 12 }, { x: 50, y: 22 }, { x: 25, y: 36 }, { x: 75, y: 36 }, { x: 50, y: 50 }, { x: 25, y: 64 }, { x: 75, y: 64 }, { x: 50, y: 78 }, { x: 25, y: 90 }, { x: 75, y: 90 }];
-    case 11: // J
-    case 12: // Q
-    case 13: // K
-    case 14: // A
+    case 11:
+    case 12:
+    case 13:
+    case 14:
       return [{ x: 50, y: 50 }];
     default:
       return [{ x: 50, y: 50 }];
   }
 }
 
-// Pip size based on rank and card size
-function getPipSize(rank: number, small: boolean): string {
-  if (small) {
-    if (rank === 14) return '14px';
-    if (rank >= 11 && rank <= 13) return '28px';
-    if (rank <= 4) return '12px';
-    if (rank <= 7) return '9px';
-    return '7px';
-  }
-  if (rank === 14) return '40px';
-  if (rank === 12) return '32px';
-  if (rank >= 11 && rank <= 13) return '35px';
-  if (rank <= 4) return '32px';
-  if (rank <= 6) return '26px';
-  if (rank <= 8) return '20px';
-  if (rank <= 9) return '16px';
-  return '13px';
+function getPipSize(rank: number, small: boolean, minPx: number): string {
+  const base = small ? minPx * 0.35 : minPx * 0.4;
+  if (rank >= 11 && rank <= 13) return `${Math.round(base * 2.2)}px`;
+  if (rank <= 4) return `${Math.round(base * 0.9)}px`;
+  if (rank <= 6) return `${Math.round(base * 0.7)}px`;
+  if (rank <= 8) return `${Math.round(base * 0.55)}px`;
+  if (rank <= 9) return `${Math.round(base * 0.45)}px`;
+  return `${Math.round(base * 0.35)}px`;
 }
 
 function getRankDisplay(rank: number): string {
