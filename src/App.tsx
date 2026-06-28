@@ -351,15 +351,18 @@ function App() {
     if (w > 0) setHandWrapperW(w);
   });
 
-  // Smooth card width: linearly interpolated base size based on minDim
-  // Ranges: 28px (minDim=300) → 64px (minDim=1000+)
+  // Card width: sized so 13 cards occupy ~20% of viewport area
+  // cardArea = cardW * cardH * 13, cardH = cardW * 1.5
+  // So cardArea = cardW^2 * 1.5 * 13 = cardW^2 * 19.5
+  // cardW = sqrt(0.20 * viewportArea / 19.5)
   const cardMinPx = useMemo(() => {
-    const d = resp.minDim;
-    if (d < 450) return 28 + (d - 300) / (150) * 8;
-    if (d < 600) return 36 + (d - 450) / 150 * 12;
-    if (d < 1000) return 48 + (d - 600) / 400 * 16;
-    return 64;
-  }, [resp.minDim]);
+    const targetRatio = 0.25;
+    const viewportArea = resp.vw * resp.vh;
+    const numCards = humanHandLen || 13;
+    const cardAreaTarget = viewportArea * targetRatio / (numCards / 13);
+    const cardW = Math.sqrt(cardAreaTarget / (1.5 * numCards));
+    return Math.round(Math.max(30, Math.min(cardW, 120)));
+  }, [resp.vw, resp.vh, humanHandLen]);
 
   // Final rendered card width — what CSS actually uses
   const cardW = Math.round(cardMinPx);
@@ -373,28 +376,31 @@ function App() {
   }, [resp.minDim]);
 
   const handSafeGap = useMemo(() => {
-    // Use the hand wrapper's ACTUAL rendered width — this is the real available space
+    // Start with 5px overlap, increase by 1px if total span exceeds available width
     const availW = handWrapperW > 0 ? handWrapperW : resp.vw - 32;
-    // Flex layout: each card has width=cardW, marginLeft=gap (negative = overlap).
-    // Total container width = cardW + (N-1) * (cardW + gap)
-    // To fit: cardW + (N-1)*(cardW + gap) ≤ availW
-    //   → gap ≤ (availW - N*cardW) / (N-1)
     const numCards = humanHandLen || 13;
-    const maxGapToFit = Math.round((availW - numCards * cardW) / (numCards - 1));
-    // Allow up to 70% overlap (card visible 30% of width) — enough to fit even on narrow screens
-    const minGap = -cardW * 0.7;
-    // Respect the user-requested baseline overlap (smoothHandGap) but shrink overlap
-    // more aggressively if the screen is too narrow.
-    const safeGap = Math.max(minGap, Math.min(smoothHandGap, maxGapToFit));
-    const totalSpan = cardW + (numCards - 1) * (cardW + safeGap);
+    let safeGap = -5;
+    let totalSpan = cardW + (numCards - 1) * (cardW + safeGap);
+    // Keep increasing overlap by 1px until it fits
+    while (totalSpan > availW) {
+      safeGap -= 1;
+      totalSpan = cardW + (numCards - 1) * (cardW + safeGap);
+    }
+    const cardArea = cardW * (cardW * 1.5) * numCards;
+    const viewportArea = resp.vw * resp.vh;
+    const handArea = totalSpan * (cardW * 1.5) * 1;
     console.log('[HAND]', {
-      handWrapperW, respVw: resp.vw, respVh: resp.vh, availW, cardW, smoothHandGap, maxGapToFit, safeGap,
-      numCards, minGap, totalSpan,
-      cardW_x_numCards: cardW * numCards,
-      remaining: availW - cardW * numCards,
+      cardW, safeGap, numCards, totalSpan, availW,
+      handWrapperW, respVw: resp.vw, respVh: resp.vh,
+      cardArea, viewportArea, handArea,
+      handPercent: `${(handArea / viewportArea * 100).toFixed(1)}%`,
+      cardPercent: `${(cardArea / viewportArea * 100).toFixed(1)}%`,
+      handTotalSpan: totalSpan,
+      containerWidth: handWrapperW || resp.vw,
+      overflows: totalSpan > (handWrapperW || resp.vw) + 10,
     });
-    return safeGap;
-  }, [smoothHandGap, cardW, resp.vw, handWrapperW, humanHandLen]);
+    return { safeGap, totalSpan };
+  }, [cardW, resp.vw, resp.vh, handWrapperW, humanHandLen]);
 
   // ========== Single/Local Handlers ==========
 
@@ -1030,6 +1036,7 @@ function App() {
           style={{
             maxHeight: handMaxH,
             gap: 0,
+            justifyContent: handSafeGap.totalSpan > (handWrapperW || resp.vw) + 10 ? 'flex-end' : 'center',
           }}
           role="list"
           aria-label="你的手牌"
@@ -1043,7 +1050,7 @@ function App() {
                 className="transition-transform duration-150"
                 style={{
                   transform: !playable && isCurrentPlayer ? 'scale(0.92) brightness(0.7)' : undefined,
-                  marginLeft: idx > 0 ? handSafeGap : 0,
+                  marginLeft: idx > 0 ? handSafeGap.safeGap : 0,
                   flexShrink: 0,
                   minWidth: 0,
                 }}
@@ -1060,7 +1067,7 @@ function App() {
                   }}
                   disabled={!isCurrentPlayer || waitingForAi || (!playable && isCurrentPlayer)}
                   animate={false}
-                  small={resp.compactFactor < 0.5}
+                  small
                   minPx={cardMinPx}
                   ariaLabel={`${card.rank} of ${card.suit}`}
                 />
