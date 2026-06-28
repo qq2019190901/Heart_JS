@@ -40,18 +40,17 @@ const Table: React.FC<TableProps> = memo(({
   const minDim = Math.min(cw, ch);
 
   // ═══════════════════════════════════════════════════════════
-  // LINEAR RESPONSIVE SIZING (no mode breakpoints)
+  // LINEAR RESPONSIVE SIZING (based on maxDim, no caps)
   // ═══════════════════════════════════════════════════════════
-  // Clamp minDim to [300, 1400] for smooth interpolation range
-  const d = Math.max(300, Math.min(1400, minDim));
-  const t = (d - 300) / 1100; // 0..1 normalized
+  const d = Math.max(300, Math.min(cw, ch));
+  const t = (d - 300) / 1100; // 0..1 at minDim=1400, grows beyond
 
-  // Card sizes — linear from 28px (300) → 64px (1400)
-  const aiCardMinPx = Math.round(28 + t * 36);
+  // Card sizes — based on container width, no upper cap
+  const aiCardMinPx = Math.round(28 + t * 72); // 28px → 100px+
 
-  // Card width/height scale with container, clamped to sensible range
-  const cardW = Math.max(aiCardMinPx, Math.min(80, Math.round(cw * 0.09)));
-  const cardH = Math.max(aiCardMinPx * 2, Math.min(112, Math.round(ch * 0.126)));
+  // Card width/height scale with container
+  const cardW = Math.max(aiCardMinPx, Math.round(cw * 0.09));
+  const cardH = Math.max(aiCardMinPx * 2, Math.round(ch * 0.126));
 
   // Table padding — linear from 2px → 6px
   const TABLE_PAD = Math.round(2 + t * 4);
