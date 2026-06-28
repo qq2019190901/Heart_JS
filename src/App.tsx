@@ -386,6 +386,12 @@ function App() {
       safeGap -= 1;
       totalSpan = cardW + (numCards - 1) * (cardW + safeGap);
     }
+    // Center the hand: first card gets a negative marginLeft to shift left,
+    // balancing the flex container so the visual center aligns with container center
+    const containerCenter = availW / 2;
+    const handCenter = totalSpan / 2;
+    const offset = containerCenter - handCenter;
+
     const cardArea = cardW * (cardW * 1.5) * numCards;
     const viewportArea = resp.vw * resp.vh;
     const handArea = totalSpan * (cardW * 1.5) * 1;
@@ -396,10 +402,12 @@ function App() {
       handPercent: `${(handArea / viewportArea * 100).toFixed(1)}%`,
       cardPercent: `${(cardArea / viewportArea * 100).toFixed(1)}%`,
       handTotalSpan: totalSpan,
-      containerWidth: handWrapperW || resp.vw,
-      overflows: totalSpan > (handWrapperW || resp.vw) + 10,
+      containerWidth: availW,
+      overflows: totalSpan > availW + 10,
+      offset,
+      handWrapperW_isZero: handWrapperW === 0,
     });
-    return { safeGap, totalSpan };
+    return { safeGap, totalSpan, offset };
   }, [cardW, resp.vw, resp.vh, handWrapperW, humanHandLen]);
 
   // ========== Single/Local Handlers ==========
@@ -1011,7 +1019,7 @@ function App() {
       </div>
 
       {/* Bottom: status + hand */}
-      <div ref={handWrapperRef} className="shrink-0 flex flex-col items-center w-full pb-1 sm:pb-3 pt-2 -mx-0.5 sm:-mx-4 px-0.5 sm:px-4 relative z-10" style={{ marginTop: '4px' }}>
+      <div ref={handWrapperRef} className="shrink-0 flex flex-col items-center w-full pb-1 sm:pb-3 pt-2 px-0.5 sm:px-4 relative z-10" style={{ marginTop: '4px' }}>
         {/* Turn status */}
         <div
           className="h-5 sm:h-6 flex items-center justify-center shrink-0 w-full mb-0.5"
@@ -1032,11 +1040,11 @@ function App() {
 
         {/* Player hand */}
         <div
-          className="flex items-end justify-center px-0.5 sm:px-2 overflow-visible"
+          className="flex items-end px-0.5 sm:px-2 overflow-visible"
           style={{
             maxHeight: handMaxH,
             gap: 0,
-            justifyContent: handSafeGap.totalSpan > (handWrapperW || resp.vw) + 10 ? 'flex-end' : 'center',
+            justifyContent: 'flex-start',
           }}
           role="list"
           aria-label="你的手牌"
@@ -1044,13 +1052,14 @@ function App() {
           {humanHand.map((card, idx) => {
             const playable = playableIds.has(card.id);
             const isCurrentPlayer = gameState.currentPlayerId === humanId;
+            const ml = idx === 0 ? handSafeGap.offset : handSafeGap.safeGap;
             return (
               <div
                 key={card.id}
                 className="transition-transform duration-150"
                 style={{
                   transform: !playable && isCurrentPlayer ? 'scale(0.92) brightness(0.7)' : undefined,
-                  marginLeft: idx > 0 ? handSafeGap.safeGap : 0,
+                  marginLeft: ml,
                   flexShrink: 0,
                   minWidth: 0,
                 }}
