@@ -5,8 +5,8 @@ export interface ResponsiveScale {
   fontScale: number;
   tableScale: number;
   spacingScale: number;
-  isCompact: boolean;
-  isVeryCompact: boolean;
+  /** 0 = very compact (small screen), 1 = spacious (large screen) */
+  compactFactor: number;
   vw: number;
   vh: number;
   aspectRatio: number;
@@ -24,10 +24,25 @@ export interface ResponsiveScale {
  * - Large/wide screens: scale UP to fill available space (no tiny cards on 1080p+)
  * - Card size is tied to viewport height (the constraining dimension in landscape)
  */
+/** Get viewport size in CSS pixels, unaffected by OS-level display scaling */
+function getCssViewportSize() {
+  // visualViewport is not affected by OS zoom/DPI scaling — always CSS pixels
+  if (window.visualViewport) {
+    return {
+      vw: Math.round(window.visualViewport.width),
+      vh: Math.round(window.visualViewport.height),
+    };
+  }
+  // Fallback for older browsers
+  return {
+    vw: window.innerWidth,
+    vh: window.innerHeight,
+  };
+}
+
 export function useResponsiveScale(): ResponsiveScale {
   const [dims, setDims] = useState(() => {
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
+    const { vw, vh } = getCssViewportSize();
     return { vw, vh, minDim: Math.min(vw, vh), maxDim: Math.max(vw, vh) };
   });
 
@@ -36,14 +51,20 @@ export function useResponsiveScale(): ResponsiveScale {
     const handleResize = () => {
       clearTimeout(timer);
       timer = setTimeout(() => {
-        const vw = window.innerWidth;
-        const vh = window.innerHeight;
+        const { vw, vh } = getCssViewportSize();
         setDims({ vw, vh, minDim: Math.min(vw, vh), maxDim: Math.max(vw, vh) });
       }, 100);
     };
     window.addEventListener('resize', handleResize);
+    // visualViewport can change independently (e.g. virtual keyboard on mobile)
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleResize);
+    }
     return () => {
       window.removeEventListener('resize', handleResize);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', handleResize);
+      }
       clearTimeout(timer);
     };
   }, []);
@@ -57,27 +78,17 @@ export function useResponsiveScale(): ResponsiveScale {
     // On phone landscape (720x360), minDim=360 -> cards shrink
     // On phone portrait (390x844), minDim=390 -> cards moderate
     let cardScale = 1.0;
-    if (aspectRatio < 0.7) {
-      // Very narrow portrait phone
-      cardScale = Math.max(0.4, Math.min(0.65, vh / 1000));
-    } else if (aspectRatio < 1.0) {
-      // Tablet portrait / narrow laptop
-      cardScale = Math.max(0.55, Math.min(0.8, vh / 900));
-    } else if (minDim < 400) {
-      // Small phone
+    if (minDim < 400) {
       cardScale = 0.5;
     } else if (minDim < 500) {
-      cardScale = 0.65;
+      cardScale = 0.5 + (minDim - 400) / 100 * (0.65 - 0.5);
     } else if (minDim < 600) {
-      cardScale = 0.8;
+      cardScale = 0.65 + (minDim - 500) / 100 * (0.8 - 0.65);
     } else if (minDim < 800) {
-      // Typical laptop (768+)
-      cardScale = 0.95;
+      cardScale = 0.8 + (minDim - 600) / 200 * (0.95 - 0.8);
     } else if (minDim < 1000) {
-      // Large laptop / 2K
-      cardScale = 1.1;
+      cardScale = 0.95 + (minDim - 800) / 200 * (1.1 - 0.95);
     } else {
-      // 4K+
       cardScale = 1.3;
     }
 
@@ -96,16 +107,15 @@ export function useResponsiveScale(): ResponsiveScale {
     // --- Spacing scale ---
     const spacingScale = Math.max(cardScale * 0.85, 0.5);
 
-    const isCompact = minDim < 600;
-    const isVeryCompact = minDim < 450;
+    // --- Compact factor: linear 0..1 across the full minDim range [300, 1400] ---
+    const compactFactor = Math.max(0, Math.min(1, (minDim - 300) / 1100));
 
     return {
       cardScale,
       fontScale,
       tableScale,
       spacingScale,
-      isCompact,
-      isVeryCompact,
+      compactFactor,
       vw,
       vh,
       aspectRatio,

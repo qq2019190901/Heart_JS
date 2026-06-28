@@ -60,22 +60,18 @@ const CardComponent: React.FC<CardComponentProps> = memo(({
   const color = SUIT_COLORS[card.suit];
   const rankDisplay = getRankDisplay(card.rank);
 
-  // Dynamic card dimensions using CSS clamp for smooth scaling.
-  // IMPORTANT: Do NOT override these with inline width/height — let CSS handle it.
-  const cardW = small
-    ? `clamp(${minPx}px, 9vw, 80px)`
-    : `clamp(64px, 16vw, 120px)`;
-  const cardH = small
-    ? `clamp(${Math.round(minPx * 1.4)}px, 12.6vw, 112px)`
-    : `clamp(90px, 22.4vw, 168px)`;
+  // Card dimensions — use fixed pixel size (minPx) to match JS hand-gap calculations.
+  // vw-based clamp causes mismatch: JS computes cardW=minPx but browser renders wider.
+  const cardW = small ? `${minPx}px` : '64px';
+  const cardH = small ? `${Math.round(minPx * 1.5)}px` : '96px';
 
   // Corner text sizes scale proportionally
   const cornerFontSize = small
-    ? `clamp(${Math.round(minPx * 0.22)}px, 2.8vw, 16px)`
-    : `clamp(11px, 2.2vw, 18px)`;
+    ? `${Math.round(minPx * 0.22)}px`
+    : '11px';
   const suitFontSize = small
-    ? `clamp(${Math.round(minPx * 0.16)}px, 2vw, 12px)`
-    : `clamp(8px, 1.6vw, 14px)`;
+    ? `${Math.round(minPx * 0.16)}px`
+    : '8px';
 
   // Center pip sizes
   const pipLayout = getPipLayout(card.rank);

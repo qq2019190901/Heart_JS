@@ -26,7 +26,9 @@ const Table: React.FC<TableProps> = memo(({
       for (const entry of entries) {
         const { width, height } = entry.contentRect;
         if (width > 0 && height > 0) {
-          setContainerSize({ w: Math.max(Math.round(width), 320), h: Math.max(Math.round(height), 480) });
+          const w = Math.max(Math.round(width), 320);
+          const h = Math.max(Math.round(height), 480);
+          setContainerSize({ w, h });
         }
       }
     });
@@ -38,36 +40,39 @@ const Table: React.FC<TableProps> = memo(({
   const minDim = Math.min(cw, ch);
 
   // ═══════════════════════════════════════════════════════════
-  // RESPONSIVE SIZING
+  // LINEAR RESPONSIVE SIZING (no mode breakpoints)
   // ═══════════════════════════════════════════════════════════
-  const isPhone = minDim < 600;
-  const isTablet = minDim >= 600 && minDim < 1024;
+  // Clamp minDim to [300, 1400] for smooth interpolation range
+  const d = Math.max(300, Math.min(1400, minDim));
+  const t = (d - 300) / 1100; // 0..1 normalized
 
-  // Card sizes
-  const aiCardMinPx = isPhone ? 28 : isTablet ? 36 : 48;
-  const cardW = Math.min(isPhone ? 56 : 80, Math.max(aiCardMinPx, Math.round(cw * (isPhone ? 0.1 : 0.09))));
-  const cardH = Math.min(isPhone ? 78 : 112, Math.max(aiCardMinPx * 2, Math.round(ch * (isPhone ? 0.1 : 0.126))));
+  // Card sizes — linear from 28px (300) → 64px (1400)
+  const aiCardMinPx = Math.round(28 + t * 36);
 
-  // Table padding
-  const TABLE_PAD = Math.max(isPhone ? 2 : 4, Math.round(minDim * 0.008));
+  // Card width/height scale with container, clamped to sensible range
+  const cardW = Math.max(aiCardMinPx, Math.min(80, Math.round(cw * 0.09)));
+  const cardH = Math.max(aiCardMinPx * 2, Math.min(112, Math.round(ch * 0.126)));
 
-  // AI hand offset — how far outside the table edge
-  const aiHandOffset = Math.max(isPhone ? 8 : 14, Math.min(isPhone ? 40 : 60, Math.round(minDim * 0.035)));
+  // Table padding — linear from 2px → 6px
+  const TABLE_PAD = Math.round(2 + t * 4);
 
-  // Trick card overlap — BASE + STEP per card
-  const trickOverlapBase = isPhone ? 12 : isTablet ? 18 : 28;
-  const trickOverlapStep = Math.max(4, Math.round(minDim * 0.012));
+  // AI hand offset — linear from 8px → 60px
+  const aiHandOffset = Math.round(8 + t * 52);
 
-  // Badge font sizes
-  const badgeFontSize = isPhone ? '9px' : isTablet ? '10px' : undefined;
-  const scoreFontSize = isPhone ? '8px' : isTablet ? '9px' : undefined;
+  // Right hand offset — linear from 20px → 120px
+  const rightHandOffset = Math.round(20 + t * 100);
+
+  // Trick card overlap — linear from 12px → 36px base, step from 4px → 14px
+  const trickOverlapBase = Math.round(12 + t * 24);
+  const trickOverlapStep = Math.max(4, Math.round(4 + t * 10));
+
+  // Badge font sizes — linear pixel values
+  const badgeFontSizePx = Math.round(9 + t * 5); // 9px → 14px
+  const scoreFontSizePx = Math.round(8 + t * 4); // 8px → 12px
 
   // Fan spacing — cards spread along the edge
   const fanStepX = Math.round(cardW * 0.22);
   const fanStepY = Math.round(cardH * 0.22);
-
-  // Bottom occupancy — human hand area
-  const bottomOccupancyRatio = isPhone ? 0.22 : isTablet ? 0.18 : 0.15;
 
   // Player index → side mapping
   const sideForIdx = (idx: number) => ['bottom', 'left', 'top', 'right'][idx] || 'bottom';
@@ -92,19 +97,16 @@ const Table: React.FC<TableProps> = memo(({
 
         // ── Position AI hand ──
         // Top: centered horizontally, above table
-        // Left: outside left edge, shifted up to avoid bottom human area
-        // Right: outside right edge, shifted up to avoid bottom human area
+        // Left: outside left edge, vertically centered in visible area
+        // Right: outside right edge, vertically centered in visible area
         let hx: string;
         let hy = side === 'top' ? ey - aiHandOffset
                : side === 'bottom' ? ey + aiHandOffset
-               : (side === 'left' || side === 'right')
-                 ? ch * (0.5 - bottomOccupancyRatio)
-                 : tcy;
+               : tcy;
 
         if (side === 'left') {
           hx = `-${aiHandOffset}px`;
         } else if (side === 'right') {
-          // Use right positioning to guarantee visibility
           hx = 'auto';
         } else {
           hx = `${tcx}px`;
@@ -115,18 +117,19 @@ const Table: React.FC<TableProps> = memo(({
         const fy = side === 'left' || side === 'right' ? fanStepY : 0;
 
         // Calculate fan total size to center it
-        const fanTotalW = displayCount * fx;
-        const fanTotalH = displayCount * fy;
+        // Actual visual width = first card's left edge to last card's right edge
+        const fanTotalW = (displayCount - 1) * fx + cardW;
+        const fanTotalH = (displayCount - 1) * fy + cardH;
 
         return (
           <div
             key={`ai-cards-${player.id}`}
             style={{
               position: 'absolute',
-              left: hx,
-              right: side === 'right' ? `-${aiHandOffset}px` : undefined,
-              top: `${hy - fanTotalH / 2}px`,
-              transform: 'translate(-50%, 0)',
+              ...(side === 'left' && { left: `-${aiHandOffset}px`, top: `${tcy - fanTotalH / 2}px`, transform: 'translate(0, 0)' }),
+              ...(side === 'right' && { right: `${rightHandOffset}px`, top: `${tcy - fanTotalH / 2}px`, transform: 'translate(0, 0)' }),
+              ...(side === 'top' && { left: `${tcx}px`, top: `${ey - aiHandOffset - fanTotalH / 2}px`, transform: 'translate(-50%, 0)' }),
+              ...(side === 'bottom' && { left: `${tcx}px`, top: `${ey + aiHandOffset - fanTotalH / 2}px`, transform: 'translate(-50%, 0)' }),
               zIndex: 5,
             }}
             aria-label={`${player.name} 的手牌`}
@@ -139,8 +142,8 @@ const Table: React.FC<TableProps> = memo(({
                   key={ci}
                   style={{
                     position: 'absolute',
-                    left: `${ci * fx}px`,
-                    top: `${ci * fy}px`,
+                    left: `${-fanTotalW / 2 + ci * fx + cardW / 2}px`,
+                    top: `${-fanTotalH / 2 + ci * fy + cardH / 2}px`,
                     width: `${cardW}px`,
                     height: `${cardH}px`,
                   }}
@@ -165,7 +168,8 @@ const Table: React.FC<TableProps> = memo(({
         const isActive = currentPlayerId === player.id;
         const isHuman = player.id === humanPlayerId;
         const side = sideForIdx(idx);
-        const badgeOff = isPhone ? 8 : 14;
+        const badgeOff = Math.round(8 + t * 10);
+        const tcy = ch / 2;
 
         // Skip bottom (human) badge — App.tsx renders the status bar separately
         // to avoid overlap with the Table container
@@ -177,10 +181,10 @@ const Table: React.FC<TableProps> = memo(({
 
         if (side === 'left') {
           bx = `-${badgeOff}px`;
-          by = `${ch * (0.5 - bottomOccupancyRatio)}px`;
+          by = `${tcy}px`;
         } else if (side === 'right') {
           bx = 'auto';
-          by = `${ch * (0.5 - bottomOccupancyRatio)}px`;
+          by = `${tcy}px`;
         } else {
           // top
           bx = `${cw / 2}px`;
@@ -209,13 +213,13 @@ const Table: React.FC<TableProps> = memo(({
                     ? 'bg-blue-500/80 text-white'
                     : 'bg-black/40 text-white/80'
               }`}
-              style={badgeFontSize ? { fontSize: badgeFontSize } : undefined}
+              style={{ fontSize: `${badgeFontSizePx}px` }}
             >
               {isHuman ? '你' : player.name}
               {isActive && <span className="ml-0.5 sm:ml-1 animate-pulse" aria-hidden="true">&#9679;</span>}
               <span
                 className="text-white/60 bg-black/40 px-1 py-0.2 sm:px-1.5 sm:py-0.5 rounded-full"
-                style={scoreFontSize ? { fontSize: scoreFontSize } : undefined}
+                style={{ fontSize: `${scoreFontSizePx}px` }}
               >
                 {player.score} 分
               </span>

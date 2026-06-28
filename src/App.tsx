@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
 import { Menu } from './components/Menu/Menu';
 import { CardComponent } from './components/Card/Card';
 import { Table } from './components/Table/Table';
@@ -333,6 +333,68 @@ function App() {
     lanPassConfirmedRef.current.clear();
     setMode(null);
   }, []);
+
+  // ========== Safe hand gap (must be before conditional returns — hooks rule) ==========
+
+  // Must be defined here for hooks ordering (before any conditional returns)
+  const humanHandLen = gameState ? (gameState.hands?.get(humanId) || []).length : 0;
+
+  // Measure the hand wrapper div's actual rendered width
+  const handWrapperRef = useRef<HTMLDivElement>(null);
+  const [handWrapperW, setHandWrapperW] = useState(0);
+
+  // Force re-read on every render cycle
+  useLayoutEffect(() => {
+    const el = handWrapperRef.current;
+    if (!el) return;
+    const w = Math.round(el.getBoundingClientRect().width);
+    if (w > 0) setHandWrapperW(w);
+  });
+
+  // Smooth card width: linearly interpolated base size based on minDim
+  // Ranges: 28px (minDim=300) → 64px (minDim=1000+)
+  const cardMinPx = useMemo(() => {
+    const d = resp.minDim;
+    if (d < 450) return 28 + (d - 300) / (150) * 8;
+    if (d < 600) return 36 + (d - 450) / 150 * 12;
+    if (d < 1000) return 48 + (d - 600) / 400 * 16;
+    return 64;
+  }, [resp.minDim]);
+
+  // Final rendered card width — what CSS actually uses
+  const cardW = Math.round(cardMinPx);
+
+  // Smooth hand overlap: interpolate between -10 (small) and -4 (large)
+  const smoothHandGap = useMemo(() => {
+    const d = resp.minDim;
+    if (d < 450) return -10 + (d - 300) / 150 * 6;
+    if (d < 800) return -4 + (d - 450) / 350 * 0;
+    return -4;
+  }, [resp.minDim]);
+
+  const handSafeGap = useMemo(() => {
+    // Use the hand wrapper's ACTUAL rendered width — this is the real available space
+    const availW = handWrapperW > 0 ? handWrapperW : resp.vw - 32;
+    // Flex layout: each card has width=cardW, marginLeft=gap (negative = overlap).
+    // Total container width = cardW + (N-1) * (cardW + gap)
+    // To fit: cardW + (N-1)*(cardW + gap) ≤ availW
+    //   → gap ≤ (availW - N*cardW) / (N-1)
+    const numCards = humanHandLen || 13;
+    const maxGapToFit = Math.round((availW - numCards * cardW) / (numCards - 1));
+    // Allow up to 70% overlap (card visible 30% of width) — enough to fit even on narrow screens
+    const minGap = -cardW * 0.7;
+    // Respect the user-requested baseline overlap (smoothHandGap) but shrink overlap
+    // more aggressively if the screen is too narrow.
+    const safeGap = Math.max(minGap, Math.min(smoothHandGap, maxGapToFit));
+    const totalSpan = cardW + (numCards - 1) * (cardW + safeGap);
+    console.log('[HAND]', {
+      handWrapperW, respVw: resp.vw, respVh: resp.vh, availW, cardW, smoothHandGap, maxGapToFit, safeGap,
+      numCards, minGap, totalSpan,
+      cardW_x_numCards: cardW * numCards,
+      remaining: availW - cardW * numCards,
+    });
+    return safeGap;
+  }, [smoothHandGap, cardW, resp.vw, handWrapperW, humanHandLen]);
 
   // ========== Single/Local Handlers ==========
 
@@ -801,14 +863,14 @@ function App() {
         <div className="flex items-center justify-between px-2 py-1 sm:px-3 sm:py-1.5 bg-black/0 shrink-0 fixed top-0 left-0 right-0 z-50">
           <button
             className="text-white/60 hover:text-white transition-colors"
-            style={resp.isCompact ? { fontSize: '11px' } : {}}
+            style={resp.compactFactor < 0.5 ? { fontSize: '11px' } : {}}
             onClick={() => setMode(null)}
           >
             ← 菜单
           </button>
           <div
             className="text-white/50 font-medium"
-            style={resp.isVeryCompact ? { fontSize: '10px' } : resp.isCompact ? { fontSize: '11px' } : {}}
+            style={resp.compactFactor < 0.2 ? { fontSize: '10px' } : resp.compactFactor < 0.5 ? { fontSize: '11px' } : {}}
           >
             第 {gameState.roundNumber} 回合 — 传牌阶段
           </div>
@@ -902,11 +964,9 @@ function App() {
   );
 
   // Responsive hand layout — scales with viewport
-  const handGap = resp.isVeryCompact ? -6 : resp.isCompact ? -10 : -4;
   const handMaxH = resp.vh < 400 ? '80px' : resp.vh < 500 ? '100px' : resp.vh < 650 ? '130px' : resp.vh < 800 ? '150px' : undefined;
-  const topBarFontSize = resp.isVeryCompact ? '10px' : resp.isCompact ? '11px' : undefined;
-  const statusFontSize = resp.isVeryCompact ? '9px' : resp.isCompact ? '11px' : undefined;
-  const cardMinPx = resp.isVeryCompact ? 28 : resp.isCompact ? 36 : 48;
+  const topBarFontSize = resp.compactFactor < 0.2 ? '10px' : resp.compactFactor < 0.5 ? '11px' : undefined;
+  const statusFontSize = resp.compactFactor < 0.2 ? '9px' : resp.compactFactor < 0.5 ? '11px' : undefined;
 
   return (
     <div className="relative w-full h-full flex flex-col overflow-hidden" style={{
@@ -932,7 +992,7 @@ function App() {
       </div>
 
       {/* Table area */}
-      <div className="flex-1 flex items-center justify-center p-0.5 sm:p-4 min-h-0 overflow-visible">
+      <div className="flex-1 flex items-center justify-center p-0.5 sm:p-4 min-h-0 overflow-visible -mx-0.5 sm:-mx-4">
         <Table
           trick={gameState.currentTrick}
           currentPlayerId={gameState.currentPlayerId}
@@ -945,7 +1005,7 @@ function App() {
       </div>
 
       {/* Bottom: status + hand */}
-      <div className="shrink-0 flex flex-col items-center px-0.5 sm:px-4 pb-1 sm:pb-3 pt-2" style={{ marginTop: '4px' }}>
+      <div ref={handWrapperRef} className="shrink-0 flex flex-col items-center w-full pb-1 sm:pb-3 pt-2 -mx-0.5 sm:-mx-4 px-0.5 sm:px-4 relative z-10" style={{ marginTop: '4px' }}>
         {/* Turn status */}
         <div
           className="h-5 sm:h-6 flex items-center justify-center shrink-0 w-full mb-0.5"
@@ -966,15 +1026,15 @@ function App() {
 
         {/* Player hand */}
         <div
-          className="flex items-end justify-center flex-wrap gap-0.5 px-0.5 sm:px-2"
+          className="flex items-end justify-center px-0.5 sm:px-2 overflow-visible"
           style={{
             maxHeight: handMaxH,
-            gap: handGap,
+            gap: 0,
           }}
           role="list"
           aria-label="你的手牌"
         >
-          {humanHand.map((card) => {
+          {humanHand.map((card, idx) => {
             const playable = playableIds.has(card.id);
             const isCurrentPlayer = gameState.currentPlayerId === humanId;
             return (
@@ -983,6 +1043,9 @@ function App() {
                 className="transition-transform duration-150"
                 style={{
                   transform: !playable && isCurrentPlayer ? 'scale(0.92) brightness(0.7)' : undefined,
+                  marginLeft: idx > 0 ? handSafeGap : 0,
+                  flexShrink: 0,
+                  minWidth: 0,
                 }}
                 role="listitem"
               >
@@ -997,7 +1060,7 @@ function App() {
                   }}
                   disabled={!isCurrentPlayer || waitingForAi || (!playable && isCurrentPlayer)}
                   animate={false}
-                  small={resp.isCompact}
+                  small={resp.compactFactor < 0.5}
                   minPx={cardMinPx}
                   ariaLabel={`${card.rank} of ${card.suit}`}
                 />
