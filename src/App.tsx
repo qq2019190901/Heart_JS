@@ -410,6 +410,34 @@ function App() {
     return { safeGap, totalSpan, offset };
   }, [cardW, resp.vw, resp.vh, handWrapperW, humanHandLen]);
 
+  // ═══════════════════════════════════════════════════════════
+  // TABLE RESPONSIVE PARAMS — computed here, passed to Table
+  // ═══════════════════════════════════════════════════════════
+  const tableT = useMemo(() => {
+    const d = Math.max(300, Math.min(resp.vw, resp.vh));
+    return (d - 300) / 1100;
+  }, [resp.vw, resp.vh]);
+
+  const tableParams = useMemo(() => {
+    const aiCardMinPx = Math.round(28 + tableT * 72);
+    const _cardW = Math.max(aiCardMinPx, Math.round(resp.vw * 0.09));
+    const _cardH = Math.max(aiCardMinPx * 2, Math.round(resp.vh * 0.126));
+    return {
+      aiCardMinPx,
+      cardW: _cardW,
+      cardH: _cardH,
+      tablePad: Math.round(2 + tableT * 4),
+      aiHandOffset: Math.round(8 + tableT * 52),
+      trickOverlapBase: Math.round(12 + tableT * 24),
+      trickOverlapStep: Math.max(4, Math.round(4 + tableT * 10)),
+      badgeOff: Math.round(8 + tableT * 10),
+      badgeFontSizePx: Math.round(9 + tableT * 5),
+      scoreFontSizePx: Math.round(8 + tableT * 4),
+      fanStepX: Math.round(_cardW * 0.22),
+      fanStepY: Math.round(_cardH * 0.22),
+    };
+  }, [tableT, resp.vw, resp.vh]);
+
   // ========== Single/Local Handlers ==========
 
   const startSingle = useCallback(() => {
@@ -983,7 +1011,7 @@ function App() {
   const statusFontSize = resp.compactFactor < 0.2 ? '9px' : resp.compactFactor < 0.5 ? '11px' : undefined;
 
   return (
-    <div className="relative w-full h-full flex flex-col overflow-hidden" style={{
+    <div className="relative w-full h-full flex flex-col overflow-visible" style={{
       background: 'linear-gradient(180deg, var(--color-bg-gradient-start, #0d5e28) 0%, var(--color-bg-gradient-end, #094a20) 100%)',
     }}>
       {/* Top bar */}
@@ -1015,6 +1043,7 @@ function App() {
             id: p.id, name: p.name, score: gameState.scores[p.id] ?? 0, isAi: !!p.isAi,
           }))}
           aiHands={gameState.hands}
+          {...tableParams}
         />
       </div>
 

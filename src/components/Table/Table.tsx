@@ -8,10 +8,26 @@ interface TableProps {
   humanPlayerId: string;
   players: { id: string; name: string; score: number; isAi?: boolean }[];
   aiHands?: Map<string, Card[]>;
+  // Responsive params (computed in App)
+  aiCardMinPx: number;
+  cardW: number;
+  cardH: number;
+  tablePad: number;
+  aiHandOffset: number;
+  trickOverlapBase: number;
+  trickOverlapStep: number;
+  badgeOff: number;
+  badgeFontSizePx: number;
+  scoreFontSizePx: number;
+  fanStepX: number;
+  fanStepY: number;
 }
 
 const Table: React.FC<TableProps> = memo(({
   trick, currentPlayerId, humanPlayerId, players, aiHands = new Map(),
+  aiCardMinPx, cardW, cardH, tablePad, aiHandOffset,
+  trickOverlapBase, trickOverlapStep, badgeOff, badgeFontSizePx, scoreFontSizePx,
+  fanStepX, fanStepY,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState(() => ({
@@ -37,48 +53,25 @@ const Table: React.FC<TableProps> = memo(({
   }, []);
 
   const { w: cw, h: ch } = containerSize;
-  const minDim = Math.min(cw, ch);
 
-  // ═══════════════════════════════════════════════════════════
-  // LINEAR RESPONSIVE SIZING (based on maxDim, no caps)
-  // ═══════════════════════════════════════════════════════════
-  const d = Math.max(300, Math.min(cw, ch));
-  const t = (d - 300) / 1100; // 0..1 at minDim=1400, grows beyond
+  // ── Layout strategy: fill the container with table + AI hands ──
+  // Reserve space for AI hands: left/right columns + top row
+  const aiHandColW = Math.round(Math.min(cw * 0.18, 160)); // left/right column width
+  const aiHandRowH = Math.round(Math.min(ch * 0.18, 160)); // top row height
 
-  // Card sizes — based on container width, no upper cap
-  const aiCardMinPx = Math.round(28 + t * 72); // 28px → 100px+
+  // Table area = container minus AI hand zones
+  const tableLeft = aiHandColW;
+  const tableTop = aiHandRowH;
+  const tableRight = cw - aiHandColW;
+  const tableBottom = ch - aiHandRowH;
+  const tableW = tableRight - tableLeft;
+  const tableH = tableBottom - tableTop;
 
-  // Card width/height scale with container
-  const cardW = Math.max(aiCardMinPx, Math.round(cw * 0.09));
-  const cardH = Math.max(aiCardMinPx * 2, Math.round(ch * 0.126));
+  // Center of the table
+  const tcx = tableLeft + tableW / 2;
+  const tcy = tableTop + tableH / 2;
 
-  // Table padding — linear from 2px → 6px
-  const TABLE_PAD = Math.round(2 + t * 4);
-
-  // AI hand offset — linear from 8px → 60px
-  const aiHandOffset = Math.round(8 + t * 52);
-
-  // Right hand offset — linear from 20px → 120px
-  const rightHandOffset = Math.round(20 + t * 100);
-
-  // Trick card overlap — linear from 12px → 36px base, step from 4px → 14px
-  const trickOverlapBase = Math.round(12 + t * 24);
-  const trickOverlapStep = Math.max(4, Math.round(4 + t * 10));
-
-  // Badge font sizes — linear pixel values
-  const badgeFontSizePx = Math.round(9 + t * 5); // 9px → 14px
-  const scoreFontSizePx = Math.round(8 + t * 4); // 8px → 12px
-
-  // Fan spacing — cards spread along the edge
-  const fanStepX = Math.round(cardW * 0.22);
-  const fanStepY = Math.round(cardH * 0.22);
-
-  // Player index → side mapping
   const sideForIdx = (idx: number) => ['bottom', 'left', 'top', 'right'][idx] || 'bottom';
-
-  // ═══════════════════════════════════════════════════════════
-  // RENDER
-  // ═══════════════════════════════════════════════════════════
 
   return (
     <div ref={containerRef} className="relative w-full h-full overflow-visible" role="application" aria-label="扑克牌桌">
@@ -89,46 +82,42 @@ const Table: React.FC<TableProps> = memo(({
         const displayCount = aiCards.length > 0 ? aiCards.length : 13;
         const side = sideForIdx(idx);
 
-        const tcx = cw / 2;
-        const tcy = ch / 2;
-        const ex = getEdgeX(side, cw);
-        const ey = getEdgeY(side, ch);
-
-        // ── Position AI hand ──
-        // Top: centered horizontally, above table
-        // Left: outside left edge, vertically centered in visible area
-        // Right: outside right edge, vertically centered in visible area
-        let hx: string;
-        let hy = side === 'top' ? ey - aiHandOffset
-               : side === 'bottom' ? ey + aiHandOffset
-               : tcy;
-
-        if (side === 'left') {
-          hx = `-${aiHandOffset}px`;
-        } else if (side === 'right') {
-          hx = 'auto';
-        } else {
-          hx = `${tcx}px`;
-        }
-
         // Fan direction
-        const fx = side === 'top' || side === 'bottom' ? fanStepX : 0;
-        const fy = side === 'left' || side === 'right' ? fanStepY : 0;
+        const isHorizontal = side === 'top' || side === 'bottom';
+        const fanSpacing = isHorizontal ? fanStepX : fanStepY;
+        const fanTotalSize = (displayCount - 1) * fanSpacing + (isHorizontal ? cardW : cardH);
 
-        // Calculate fan total size to center it
-        // Actual visual width = first card's left edge to last card's right edge
-        const fanTotalW = (displayCount - 1) * fx + cardW;
-        const fanTotalH = (displayCount - 1) * fy + cardH;
+        // Position AI hand inside the reserved zone next to table edge
+        let handStyle: React.CSSProperties;
+        if (side === 'left') {
+          // Inside left column, vertically centered in table area
+          handStyle = {
+            left: `${tableLeft - fanTotalSize}px`,
+            top: `${tcy - fanTotalSize / 2}px`,
+          };
+        } else if (side === 'right') {
+          // Inside right column, vertically centered in table area
+          handStyle = {
+            left: `${tableRight + 2}px`,
+            top: `${tcy - fanTotalSize / 2}px`,
+          };
+        } else if (side === 'top') {
+          // Inside top row, horizontally centered
+          handStyle = {
+            left: `${tcx - fanTotalSize / 2}px`,
+            top: `${tableTop - fanTotalSize}px`,
+          };
+        } else {
+          // bottom — shouldn't render (human hand is at bottom)
+          handStyle = {};
+        }
 
         return (
           <div
             key={`ai-cards-${player.id}`}
             style={{
               position: 'absolute',
-              ...(side === 'left' && { left: `-${aiHandOffset}px`, top: `${tcy - fanTotalH / 2}px`, transform: 'translate(0, 0)' }),
-              ...(side === 'right' && { right: `${rightHandOffset}px`, top: `${tcy - fanTotalH / 2}px`, transform: 'translate(0, 0)' }),
-              ...(side === 'top' && { left: `${tcx}px`, top: `${ey - aiHandOffset - fanTotalH / 2}px`, transform: 'translate(-50%, 0)' }),
-              ...(side === 'bottom' && { left: `${tcx}px`, top: `${ey + aiHandOffset - fanTotalH / 2}px`, transform: 'translate(-50%, 0)' }),
+              ...handStyle,
               zIndex: 5,
             }}
             aria-label={`${player.name} 的手牌`}
@@ -141,8 +130,8 @@ const Table: React.FC<TableProps> = memo(({
                   key={ci}
                   style={{
                     position: 'absolute',
-                    left: `${-fanTotalW / 2 + ci * fx + cardW / 2}px`,
-                    top: `${-fanTotalH / 2 + ci * fy + cardH / 2}px`,
+                    left: isHorizontal ? `${ci * fanSpacing}px` : `${-cardW / 2}px`,
+                    top: isHorizontal ? `${-cardH / 2}px` : `${ci * fanSpacing}px`,
                     width: `${cardW}px`,
                     height: `${cardH}px`,
                   }}
@@ -167,27 +156,22 @@ const Table: React.FC<TableProps> = memo(({
         const isActive = currentPlayerId === player.id;
         const isHuman = player.id === humanPlayerId;
         const side = sideForIdx(idx);
-        const badgeOff = Math.round(8 + t * 10);
-        const tcy = ch / 2;
 
-        // Skip bottom (human) badge — App.tsx renders the status bar separately
-        // to avoid overlap with the Table container
         if (side === 'bottom') return null;
 
-        // Badge position: centered on table edge, offset outward
-        let bx: string;
-        let by: string;
+        let badgeLeft: number;
+        let badgeTop: number;
 
         if (side === 'left') {
-          bx = `-${badgeOff}px`;
-          by = `${tcy}px`;
+          badgeLeft = tableLeft - badgeOff;
+          badgeTop = tcy;
         } else if (side === 'right') {
-          bx = 'auto';
-          by = `${tcy}px`;
+          badgeLeft = tableRight + badgeOff;
+          badgeTop = tcy;
         } else {
           // top
-          bx = `${cw / 2}px`;
-          by = `-${badgeOff}px`;
+          badgeLeft = tcx;
+          badgeTop = tableTop - badgeOff;
         }
 
         return (
@@ -196,16 +180,15 @@ const Table: React.FC<TableProps> = memo(({
             className="pointer-events-auto"
             style={{
               position: 'absolute',
-              left: side === 'right' ? 'auto' : bx,
-              right: side === 'right' ? `-${badgeOff}px` : undefined,
-              top: by,
+              left: `${badgeLeft}px`,
+              top: `${badgeTop}px`,
               transform: 'translate(-50%, -50%)',
               zIndex: 10,
             }}
             aria-label={`${player.name} ${isActive ? '(回合中)' : ''} 当前 ${player.score} 分`}
           >
             <div
-              className={`px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap backdrop-blur-sm flex items-center gap-0.5 sm:gap-1 ${
+              className={`px-1.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap backdrop-blur-sm flex items-center gap-0.5 ${
                 isActive
                   ? 'bg-amber-400/90 text-gray-900 shadow-lg shadow-amber-400/30'
                   : isHuman
@@ -215,9 +198,9 @@ const Table: React.FC<TableProps> = memo(({
               style={{ fontSize: `${badgeFontSizePx}px` }}
             >
               {isHuman ? '你' : player.name}
-              {isActive && <span className="ml-0.5 sm:ml-1 animate-pulse" aria-hidden="true">&#9679;</span>}
+              {isActive && <span className="ml-0.5 animate-pulse" aria-hidden="true">&#9679;</span>}
               <span
-                className="text-white/60 bg-black/40 px-1 py-0.2 sm:px-1.5 sm:py-0.5 rounded-full"
+                className="text-white/60 bg-black/40 px-1 py-0.5 rounded-full"
                 style={{ fontSize: `${scoreFontSizePx}px` }}
               >
                 {player.score} 分
@@ -229,19 +212,19 @@ const Table: React.FC<TableProps> = memo(({
 
       {/* ── Table (green felt) ───────────────────────────────────── */}
       <div
-        className="rounded-xl sm:rounded-2xl md:rounded-3xl border-2 sm:border-4 md:border-8 border-amber-900/60 shadow-2xl overflow-visible"
+        className="rounded-xl border-amber-900/60 shadow-2xl overflow-visible"
         style={{
           position: 'absolute',
-          left: `${TABLE_PAD}px`,
-          top: `${TABLE_PAD}px`,
-          width: `${cw - TABLE_PAD * 2}px`,
-          height: `${ch - TABLE_PAD * 2}px`,
+          left: `${tableLeft}px`,
+          top: `${tableTop}px`,
+          width: `${tableW}px`,
+          height: `${tableH}px`,
           background: 'radial-gradient(ellipse at center, var(--color-felt-light, #1a8a4a) 0%, var(--color-felt-mid, #0d6e38) 50%, var(--color-felt-dark, #094a20) 100%)',
         }}
         role="region"
         aria-label="牌桌区域"
       >
-        {/* Trick cards — centered, fanning toward player sides */}
+        {/* Trick cards */}
         {trick && trick.cards.length > 0 && (
           <div className="absolute inset-0 flex items-center justify-center">
             {trick.cards.map((play, cardIdx) => {
@@ -275,7 +258,7 @@ const Table: React.FC<TableProps> = memo(({
         {/* Empty state hint */}
         {(!trick || trick.cards.length === 0) && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="text-white/10 text-lg sm:text-2xl md:text-4xl font-bold select-none">
+            <div className="text-white/10 text-lg font-bold select-none">
               出牌区
             </div>
           </div>
@@ -286,26 +269,6 @@ const Table: React.FC<TableProps> = memo(({
 });
 
 // ── Position helpers ──────────────────────────────────────────────────────
-
-function getEdgeX(side: string, containerW: number): number {
-  switch (side) {
-    case 'bottom': return containerW / 2;
-    case 'left':   return 0;
-    case 'top':    return containerW / 2;
-    case 'right':  return containerW;
-  }
-  return containerW / 2;
-}
-
-function getEdgeY(side: string, containerH: number): number {
-  switch (side) {
-    case 'bottom': return containerH;
-    case 'left':   return containerH / 2;
-    case 'top':    return 0;
-    case 'right':  return containerH / 2;
-  }
-  return containerH / 2;
-}
 
 function getTrickTX(side: string, offset: number): number {
   switch (side) {
