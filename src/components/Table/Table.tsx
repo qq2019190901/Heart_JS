@@ -28,6 +28,7 @@ const Table: React.FC<TableProps> = memo(({
   aiCardMinPx, cardW, cardH, tablePad, aiHandOffset,
   trickOverlapBase, trickOverlapStep, badgeOff, badgeFontSizePx, scoreFontSizePx,
   fanStepX, fanStepY,
+  turnStatus,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState(() => ({
@@ -157,6 +158,7 @@ const Table: React.FC<TableProps> = memo(({
         const isHuman = player.id === humanPlayerId;
         const side = sideForIdx(idx);
 
+        // Skip bottom (human) badge — rendered below the table near player hand
         if (side === 'bottom') return null;
 
         let badgeLeft: number;
@@ -209,6 +211,67 @@ const Table: React.FC<TableProps> = memo(({
           </div>
         );
       })}
+
+      {/* ── Human Player Badge (bottom) ──────────────────────────── */}
+      {(() => {
+        const humanPlayer = players.find(p => p.id === humanPlayerId);
+        if (!humanPlayer) return null;
+        const isActive = currentPlayerId === humanPlayerId;
+        const badgeLeft = tcx;
+        const badgeTop = tableBottom + badgeOff;
+        return (
+          <div
+            key={humanPlayer.id}
+            className="pointer-events-auto"
+            style={{
+              position: 'absolute',
+              left: `${badgeLeft}px`,
+              top: `${badgeTop}px`,
+              transform: 'translate(-50%, -50%)',
+              zIndex: 10,
+            }}
+            aria-label={`${humanPlayer.name} 当前 ${humanPlayer.score} 分`}
+          >
+            <div
+              className={`px-1.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap backdrop-blur-sm flex items-center gap-0.5 ${
+                isActive
+                  ? 'bg-amber-400/90 text-gray-900 shadow-lg shadow-amber-400/30'
+                  : 'bg-blue-500/80 text-white'
+              }`}
+              style={{ fontSize: `${badgeFontSizePx}px` }}
+            >
+              {humanPlayer.name}
+              {isActive && <span className="ml-0.5 animate-pulse" aria-hidden="true">&#9679;</span>}
+              <span
+                className="text-white/60 bg-black/40 px-1 py-0.5 rounded-full"
+                style={{ fontSize: `${scoreFontSizePx}px` }}
+              >
+                {humanPlayer.score} 分
+              </span>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Turn Status (above table bottom edge) ────────────────── */}
+      {turnStatus && (
+        <div
+          className="pointer-events-none"
+          style={{
+            position: 'absolute',
+            left: `${tcx}px`,
+            top: `${tableBottom - 20}px`,
+            transform: 'translate(-50%, 0)',
+            zIndex: 10,
+          }}
+          aria-live="polite"
+          role="status"
+        >
+          <div style={{ fontSize: `${badgeFontSizePx}px` }}>
+            {turnStatus}
+          </div>
+        </div>
+      )}
 
       {/* ── Table (green felt) ───────────────────────────────────── */}
       <div

@@ -1044,28 +1044,22 @@ function App() {
           }))}
           aiHands={gameState.hands}
           {...tableParams}
+          turnStatus={
+            gameState.currentPlayerId === humanId && !waitingForAi ? (
+              <div className="text-green-300 animate-pulse font-semibold">轮到你了！</div>
+            ) : waitingForAi ? (
+              <div className="text-white/50">AI 思考中...</div>
+            ) : (
+              <div className="text-white/40">
+                {gameState.players.find(p => p.id === gameState.currentPlayerId)?.name || ''} 的回合
+              </div>
+            )
+          }
         />
       </div>
 
-      {/* Bottom: status + hand */}
+      {/* Bottom: hand only */}
       <div ref={handWrapperRef} className="shrink-0 flex flex-col items-center w-full pb-1 sm:pb-3 pt-2 px-0.5 sm:px-4 relative z-10" style={{ marginTop: '4px' }}>
-        {/* Turn status */}
-        <div
-          className="h-5 sm:h-6 flex items-center justify-center shrink-0 w-full mb-0.5"
-          style={{ fontSize: statusFontSize }}
-          aria-live="polite"
-          role="status"
-        >
-          {gameState.currentPlayerId === humanId && !waitingForAi && (
-            <div className="text-green-300 animate-pulse font-semibold">轮到你了！</div>
-          )}
-          {waitingForAi && <div className="text-white/50">AI 思考中...</div>}
-          {!waitingForAi && gameState.currentPlayerId !== humanId && (
-            <div className="text-white/40">
-              {gameState.players.find(p => p.id === gameState.currentPlayerId)?.name || ''} 的回合
-            </div>
-          )}
-        </div>
 
         {/* Player hand */}
         <div
