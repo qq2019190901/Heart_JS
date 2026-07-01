@@ -4,18 +4,15 @@ import { CardComponent } from './components/Card/Card';
 import { Table } from './components/Table/Table';
 import { ScoreBoard } from './components/ScoreBoard/ScoreBoard';
 import { LanLobby } from './components/Lan/LanLobby';
-import { WsLobby } from './components/Multi/WsLobby';
 import type { GameState, Card, Player, PassDirection } from './game/types';
 import { createInitialState, dealCardsForRound, applyCardPass, playCard } from './game/hearts-game';
 import { getAiDecision } from './game/ai';
 import { getAiPlayDecision } from './game/ai-turn';
 import { heartsAreBroken, canPlayCard, getAllPlayableCards } from './game/rules';
-import { wsManager } from './multiplayer/websocket';
 import { useResponsive } from './hooks/useResponsive';
 import { lanPeer, LanPeerManager } from './network/lan-peer';
-import { roomManager } from './network/room-manager';
 
-type GameMode = 'single' | 'local' | 'multi' | 'lan';
+type GameMode = 'single' | 'local' | 'lan';
 
 function App() {
   const [mode, setMode] = useState<GameMode | null>(null);
@@ -25,10 +22,6 @@ function App() {
   const [gameOver, setGameOver] = useState(false);
   const [playerName] = useState('玩家');
   const [waitingForAi, setWaitingForAi] = useState(false);
-  const [multiStatus, setMultiStatus] = useState<'idle' | 'connecting' | 'connected' | 'in_room' | 'waiting'>('idle');
-  const [multiRoomCode, setMultiRoomCode] = useState('');
-  const [multiRoomPlayers, setMultiRoomPlayers] = useState<{ id: string; name: string; ready: boolean }[]>([]);
-  const [joinRoomCode, setJoinRoomCode] = useState('');
   const [showPassUI, setShowPassUI] = useState(false);
   const [selectedPassCardIds, setSelectedPassCardIds] = useState<Set<string>>(new Set());
   const aiTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -138,26 +131,10 @@ function App() {
         lanPlayersRef.current = updated;
         return updated;
       });
-      roomManager.removePlayer(data.id);
       // Broadcast updated player list to remaining guests
       if (lanIsHostRef.current) {
         const playerList = lanPlayersRef.current.filter(p => p.id !== data.id).map(p => ({ id: p.id, name: p.name }));
         lanPeer.broadcastPlayerList(playerList);
-      }
-      // Fill with AI if game is in progress
-      if (gameState && gameState.phase === 'playing') {
-        const players = roomManager.getPlayers();
-        while (players.length < 4) {
-          const aiIdx = players.length + 1;
-          players.push({
-            id: `ai-fill-${aiIdx}`,
-            name: `AI ${aiIdx}`,
-            score: 0,
-            isAi: true,
-            isHuman: false,
-            difficulty: 'medium',
-          });
-        }
       }
     };
 
@@ -227,7 +204,6 @@ function App() {
         console.log(`[LAN] Host room created: ${id}, my PeerJS ID:`, lanPeer.myId);
         // Now we have the real PeerJS-assigned ID
         lanPlayerIdRef.current = lanPeer.myId;
-        roomManager.initAsHost(lanPeer.myId, playerName, id);
         const initialPlayers = [{ id: lanPeer.myId, name: playerName, isAi: false }];
         setLanPlayers(initialPlayers);
         lanPlayersRef.current = initialPlayers;
@@ -322,7 +298,6 @@ function App() {
 
   const handleLanLeave = useCallback(() => {
     lanPeer.disconnect();
-    roomManager.reset();
     setLanRoomCode('');
     setLanIsHost(false);
     setLanPlayers([]);
@@ -478,95 +453,6 @@ function App() {
     }, 500);
   }, []);
 
-  const startMulti = useCallback(() => {
-    setMultiStatus('connecting');
-    wsManager.connect(() => {
-      setMultiStatus('connected');
-      wsManager.createRoom(playerName);
-    });
-  }, [playerName]);
-
-  const joinMultiRoom = useCallback(() => {
-    if (joinRoomCode.trim().length < 3) return;
-    setMultiStatus('connecting');
-    wsManager.connect(() => {
-      setMultiStatus('connected');
-      wsManager.joinRoom(playerName, joinRoomCode.trim().toUpperCase());
-    });
-  }, [joinRoomCode, playerName]);
-
-  const handleMultiReadyUp = useCallback(() => {
-    wsManager.readyUp();
-  }, []);
-
-  const handleMultiLeave = useCallback(() => {
-    wsManager.leaveRoom();
-    wsManager.disconnect();
-    setMultiStatus('idle');
-    setMultiRoomCode('');
-    setMultiRoomPlayers([]);
-    setMode(null);
-  }, []);
-
-  const deserializeState = useCallback((raw: any): GameState | null => {
-    if (!raw) return null;
-    const handsRaw = raw.hands;
-    const hands = new Map<string, Card[]>();
-    if (handsRaw && typeof handsRaw === 'object') {
-      for (const [k, v] of Object.entries(handsRaw)) {
-        if (Array.isArray(v)) hands.set(k, v);
-      }
-    }
-    return { ...raw, hands } as GameState;
-  }, []);
-
-  // ========== WebSocket Listeners ==========
-
-  useEffect(() => {
-    wsManager.on('room_created', (data) => {
-      wsManager.setRoomId(data.roomId);
-      setMultiRoomCode(data.roomId);
-      setMultiStatus('waiting');
-      setMultiRoomPlayers(data.players || []);
-    });
-    wsManager.on('room_joined', (data) => {
-      wsManager.setRoomId(data.roomId);
-      setMultiStatus('waiting');
-      setMultiRoomPlayers(data.players || []);
-    });
-    wsManager.on('player_joined', (data) => {
-      setMultiRoomPlayers(data.players || []);
-    });
-    wsManager.on('player_left', (data) => {
-      setMultiRoomPlayers(data.players || []);
-    });
-    wsManager.on('start_game', (data) => {
-      const state = deserializeState(data.state);
-      setGameState(state);
-      setHumanId(state?.players.find((p: Player) => p.isHuman)?.id ?? '');
-      setMultiStatus('in_room');
-      setRoundOver(false);
-      setGameOver(false);
-      setMultiRoomCode('');
-      setMultiRoomPlayers([]);
-      if (state?.phase === 'passing') setShowPassUI(true);
-    });
-    wsManager.on('game_state', (data) => {
-      const state = deserializeState(data.state);
-      setGameState(state);
-      if (state?.phase === 'passing') setShowPassUI(true);
-      else if (state?.phase === 'playing') {
-        setShowPassUI(false);
-        setSelectedPassCardIds(new Set());
-      }
-      if (state?.phase === 'roundOver') setRoundOver(true);
-      else if (state?.phase === 'gameOver') setGameOver(true);
-    });
-    wsManager.on('round_over', () => setRoundOver(true));
-    wsManager.on('game_over', () => setGameOver(true));
-    return () => { wsManager.disconnect(); };
-  }, [deserializeState]);
-
   // ========== LAN: AI Turn Handling ==========
 
   useEffect(() => {
@@ -721,11 +607,6 @@ function App() {
   const handlePassConfirm = () => {
     if (!gameState || gameState.phase !== 'passing') return;
 
-    if (mode === 'multi') {
-      wsManager.passCard(Array.from(selectedPassCardIds));
-      return;
-    }
-
     if (mode === 'lan') {
       if (lanIsHostRef.current) {
         const prevSelection = new Set(selectedPassCardIds);
@@ -807,23 +688,6 @@ function App() {
         onCancel={handleLanLeave}
         status={lanStatus}
         errorMessage={lanErrorMessage}
-      />
-    );
-  }
-
-  // ========== WebSocket Lobby Screen ==========
-
-  if (mode === 'multi' && multiStatus === 'waiting') {
-    // Determine if local player is host (first player in room_created response)
-    const isHost = multiRoomPlayers.length > 0 && multiRoomPlayers[0]?.name === playerName;
-    return (
-      <WsLobby
-        roomId={multiRoomCode}
-        playerName={playerName}
-        players={multiRoomPlayers}
-        onCancel={handleMultiLeave}
-        onReadyUp={handleMultiReadyUp}
-        isHost={isHost}
       />
     );
   }
@@ -1092,8 +956,7 @@ function App() {
                   card={card}
                   onClick={() => {
                     if (isCurrentPlayer && playable) {
-                      if (mode === 'multi') wsManager.playCard(card.id);
-                      else if (mode === 'lan') lanPeer.sendToHost('play-card', { cardId: card.id, type: 'play-card' });
+                      if (mode === 'lan') lanPeer.sendToHost('play-card', { cardId: card.id, type: 'play-card' });
                       else handleCardClick(card);
                     }
                   }}

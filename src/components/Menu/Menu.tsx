@@ -122,7 +122,7 @@ const Menu: React.FC<MenuProps> = memo(({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.3 }}
         >
-          <h3 className={`text-white font-bold text-center mb-2 sm:mb-3 ${isVeryCompact ? 'text-sm' : 'text-base'}`}>局域网联机</h3>
+          <h3 className={`text-white font-bold text-center mb-2 sm:mb-3 ${isPhone ? 'text-sm' : 'text-base'}`}>局域网联机</h3>
 
           {/* Server Config */}
           <div className="mb-2 sm:mb-3">
@@ -173,7 +173,7 @@ const Menu: React.FC<MenuProps> = memo(({
                 maxLength={12}
               />
               <button
-                className={`px-3 sm:px-4 rounded-lg text-white font-semibold transition-all ${isVeryCompact ? 'text-xs py-1.5' : 'text-sm py-2'}`}
+                className={`px-3 sm:px-4 rounded-lg text-white font-semibold transition-all ${isPhone ? 'text-xs py-1.5' : 'text-sm py-2'}`}
                 style={{
                   background: 'linear-gradient(135deg, #2ecc71, #27ae60)',
                   boxShadow: '0 2px 10px rgba(46,204,113,0.3)',
@@ -201,7 +201,7 @@ const Menu: React.FC<MenuProps> = memo(({
               maxLength={12}
             />
             <button
-              className={`px-3 sm:px-4 rounded-lg text-white font-semibold transition-all ${isVeryCompact ? 'text-xs py-1.5' : 'text-sm py-2'}`}
+              className={`px-3 sm:px-4 rounded-lg text-white font-semibold transition-all ${isPhone ? 'text-xs py-1.5' : 'text-sm py-2'}`}
               style={{
                 background: 'linear-gradient(135deg, #3498db, #2980b9)',
                 boxShadow: '0 2px 10px rgba(52,152,219,0.3)',

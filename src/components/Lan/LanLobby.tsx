@@ -47,11 +47,11 @@ const LanLobby: React.FC<LanLobbyProps> = memo(({
   const subtitleSize = isPhone ? 'text-[10px]' : isTablet ? 'text-xs' : 'text-sm';
   const labelSize = isPhone ? 'text-[9px]' : 'text-xs';
   const roomCodeSize = isPhone ? 'text-2xl' : 'text-3xl';
-  const playerItemPadding = isCompact ? 'px-2 py-1' : 'px-3 py-2';
-  const playerNameSize = isVeryCompact ? 'text-[11px]' : isCompact ? 'text-xs' : 'text-sm';
-  const metaSize = isVeryCompact ? 'text-[9px]' : 'text-xs';
-  const btnPadding = isVeryCompact ? 'py-1.5' : isCompact ? 'py-2' : 'py-2.5';
-  const btnFontSize = isVeryCompact ? 'text-[10px]' : isCompact ? 'text-xs' : 'text-sm';
+  const playerItemPadding = isPhone ? 'px-2 py-1' : 'px-3 py-2';
+  const playerNameSize = isPhone ? 'text-[11px]' : isPhone ? 'text-xs' : 'text-sm';
+  const metaSize = isPhone ? 'text-[9px]' : 'text-xs';
+  const btnPadding = isPhone ? 'py-1.5' : isPhone ? 'py-2' : 'py-2.5';
+  const btnFontSize = isPhone ? 'text-[10px]' : isPhone ? 'text-xs' : 'text-sm';
 
   return (
     <div className="min-h-screen min-h-dvh flex flex-col items-center justify-center p-2 sm:p-4"

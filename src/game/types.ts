@@ -53,38 +53,6 @@ export interface GameState {
 
 export type PassDirection = 'left' | 'right' | 'across' | 'none';
 
-// ===== Multiplayer Protocol =====
-
-export const ServerToClientMsg = {
-  GAME_STATE: 'game_state',
-  PLAYER_JOINED: 'player_joined',
-  PLAYER_LEFT: 'player_left',
-  WAIT_TURN: 'wait_turn',
-  ROUND_OVER: 'round_over',
-  GAME_OVER: 'game_over',
-  ERROR: 'error',
-  ROOM_FULL: 'room_full',
-  START_GAME: 'start_game',
-} as const;
-
-export const ClientToServerMsg = {
-  JOIN_ROOM: 'join_room',
-  LEAVE_ROOM: 'leave_room',
-  PLAY_CARD: 'play_card',
-  PASS_CARD: 'pass_card',
-  READY: 'ready',
-  CREATE_ROOM: 'create_room',
-} as const;
-
-export interface PlayCardPayload {
-  cardId: string;
-}
-
-export interface JoinRoomPayload {
-  playerName: string;
-  roomId?: string;
-}
-
 // ===== AI Types =====
 
 export interface AiDecision {
