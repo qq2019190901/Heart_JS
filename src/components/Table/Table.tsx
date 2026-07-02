@@ -165,15 +165,15 @@ const Table: React.FC<TableProps> = memo(({
         let badgeTop: number;
 
         if (side === 'left') {
-          badgeLeft = tableLeft - badgeOff;
+          badgeLeft = tableLeft + badgeOff;
           badgeTop = tcy;
         } else if (side === 'right') {
-          badgeLeft = tableRight + badgeOff;
+          badgeLeft = tableRight - badgeOff;
           badgeTop = tcy;
         } else {
           // top
           badgeLeft = tcx;
-          badgeTop = tableTop - badgeOff;
+          badgeTop = tableTop + badgeOff;
         }
 
         return (
@@ -218,7 +218,7 @@ const Table: React.FC<TableProps> = memo(({
         if (!humanPlayer) return null;
         const isActive = currentPlayerId === humanPlayerId;
         const badgeLeft = tcx;
-        const badgeTop = tableBottom + badgeOff;
+        const badgeTop = tableBottom - badgeOff;
         return (
           <div
             key={humanPlayer.id}
@@ -260,7 +260,7 @@ const Table: React.FC<TableProps> = memo(({
           style={{
             position: 'absolute',
             left: `${tcx}px`,
-            top: `${tableBottom - 20}px`,
+            top: `${tableBottom - 40}px`,
             transform: 'translate(-50%, 0)',
             zIndex: 10,
           }}
