@@ -125,7 +125,9 @@ const ScoreBoard: React.FC<ScoreBoardProps> = memo(({
         {/* Scores */}
         <div className={`${listGap} mb-3 sm:mb-4 sm:mb-6`}>
           {sorted.map((player, idx) => {
-            const wonCards = trickCardsWon?.[player.id] || [];
+            const allWonCards = trickCardsWon?.[player.id] || [];
+            // Show only scoring cards (♥ and ♠Q)
+            const scoringCards = allWonCards.filter(c => c.suit === 'hearts' || (c.suit === 'spades' && c.rank === 12));
             return (
               <div
                 key={player.id}
@@ -147,9 +149,9 @@ const ScoreBoard: React.FC<ScoreBoardProps> = memo(({
                     {player.score} 分
                   </span>
                 </div>
-                {wonCards.length > 0 && (
+                {scoringCards.length > 0 && (
                   <div className={`px-1.5 pb-1.5 sm:px-2 sm:pb-2 flex flex-wrap gap-0.5 sm:gap-1`}>
-                    {wonCards.map((card, ci) => (
+                    {scoringCards.map((card, ci) => (
                       <MiniCard key={ci} card={card} size={miniCardSize} />
                     ))}
                   </div>
