@@ -21,6 +21,7 @@ interface TableProps {
   scoreFontSizePx: number;
   fanStepX: number;
   fanStepY: number;
+  turnStatus?: React.ReactNode;
 }
 
 const Table: React.FC<TableProps> = memo(({
@@ -55,16 +56,30 @@ const Table: React.FC<TableProps> = memo(({
 
   const { w: cw, h: ch } = containerSize;
 
-  // ── Layout strategy: fill the container with table + AI hands ──
-  // Reserve space for AI hands: left/right columns + top row
-  const aiHandColW = Math.round(Math.min(cw * 0.18, 160)); // left/right column width
-  const aiHandRowH = Math.round(Math.min(ch * 0.18, 160)); // top row height
+  // ── Layout strategy: position AI hands first, then place table to fill the rest ──
 
-  // Table area = container minus AI hand zones
-  const tableLeft = aiHandColW;
-  const tableTop = aiHandRowH;
-  const tableRight = cw - aiHandColW;
-  const tableBottom = ch - aiHandRowH;
+  // Top AI hand: horizontal fan, pinned to top edge, horizontally centered
+  const topFanW = (13 - 1) * fanStepX + cardW;
+  const topHandLeft = (cw - topFanW) / 2;
+  const topHandTop = 0;
+  const topHandBottom = topHandTop + cardH;
+
+  // Left AI hand: vertical fan, pinned to left edge, vertically centered
+  const leftFanH = (13 - 1) * fanStepY + cardH;
+  const leftHandLeft = 0;
+  const leftHandTop = (ch - leftFanH) / 2;
+  const leftHandRight = leftHandLeft + cardW;
+
+  // Right AI hand: vertical fan, pinned to right edge, vertically centered
+  const rightHandLeft = cw - cardW;
+  const rightHandTop = (ch - leftFanH) / 2;
+  const rightHandBottom = rightHandTop + cardH;
+
+  // Table fills the space between AI hands
+  const tableLeft = leftHandRight;
+  const tableTop = topHandBottom;
+  const tableRight = rightHandLeft;
+  const tableBottom = ch; // extends to bottom (below table is human hand area)
   const tableW = tableRight - tableLeft;
   const tableH = tableBottom - tableTop;
 
@@ -88,26 +103,14 @@ const Table: React.FC<TableProps> = memo(({
         const fanSpacing = isHorizontal ? fanStepX : fanStepY;
         const fanTotalSize = (displayCount - 1) * fanSpacing + (isHorizontal ? cardW : cardH);
 
-        // Position AI hand inside the reserved zone next to table edge
+        // Position AI hand based on its side
         let handStyle: React.CSSProperties;
         if (side === 'left') {
-          // Left: vertical fan, placed to the left of table edge
-          handStyle = {
-            left: `${tableLeft - cardW}px`,
-            top: `${tcy - displayCount * fanStepY / 2}px`,
-          };
+          handStyle = { left: `${leftHandLeft}px`, top: `${leftHandTop}px` };
         } else if (side === 'right') {
-          // Right: vertical fan, placed to the right of table edge
-          handStyle = {
-            left: `${tableRight + 2}px`,
-            top: `${tcy - displayCount * fanStepY / 2}px`,
-          };
+          handStyle = { left: `${rightHandLeft}px`, top: `${rightHandTop}px` };
         } else if (side === 'top') {
-          // Top: horizontal fan, placed above the table edge
-          handStyle = {
-            left: `${tcx - displayCount * fanStepX / 2}px`,
-            top: `${tableTop - cardH}px`,
-          };
+          handStyle = { left: `${topHandLeft}px`, top: `${topHandTop}px` };
         } else {
           // bottom — shouldn't render (human hand is at bottom)
           handStyle = {};
