@@ -91,22 +91,22 @@ const Table: React.FC<TableProps> = memo(({
         // Position AI hand inside the reserved zone next to table edge
         let handStyle: React.CSSProperties;
         if (side === 'left') {
-          // Inside left column, vertically centered in table area
+          // Left: vertical fan, placed to the left of table edge
           handStyle = {
-            left: `${tableLeft - fanTotalSize}px`,
-            top: `${tcy - fanTotalSize / 2}px`,
+            left: `${tableLeft - cardW}px`,
+            top: `${tcy - displayCount * fanStepY / 2}px`,
           };
         } else if (side === 'right') {
-          // Inside right column, vertically centered in table area
+          // Right: vertical fan, placed to the right of table edge
           handStyle = {
             left: `${tableRight + 2}px`,
-            top: `${tcy - fanTotalSize / 2}px`,
+            top: `${tcy - displayCount * fanStepY / 2}px`,
           };
         } else if (side === 'top') {
-          // Inside top row, horizontally centered
+          // Top: horizontal fan, placed above the table edge
           handStyle = {
-            left: `${tcx - fanTotalSize / 2}px`,
-            top: `${tableTop - fanTotalSize}px`,
+            left: `${tcx - displayCount * fanStepX / 2}px`,
+            top: `${tableTop - cardH}px`,
           };
         } else {
           // bottom — shouldn't render (human hand is at bottom)
@@ -131,8 +131,8 @@ const Table: React.FC<TableProps> = memo(({
                   key={ci}
                   style={{
                     position: 'absolute',
-                    left: isHorizontal ? `${ci * fanSpacing}px` : `${-cardW / 2}px`,
-                    top: isHorizontal ? `${-cardH / 2}px` : `${ci * fanSpacing}px`,
+                    left: isHorizontal ? `${ci * fanSpacing}px` : '0px',
+                    top: isHorizontal ? '0px' : `${ci * fanSpacing}px`,
                     width: `${cardW}px`,
                     height: `${cardH}px`,
                   }}
