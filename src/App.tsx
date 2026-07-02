@@ -326,18 +326,13 @@ function App() {
     if (w > 0) setHandWrapperW(w);
   });
 
-  // Card width: sized so 13 cards occupy ~20% of viewport area
-  // cardArea = cardW * cardH * 13, cardH = cardW * 1.5
-  // So cardArea = cardW^2 * 1.5 * 13 = cardW^2 * 19.5
-  // cardW = sqrt(0.20 * viewportArea / 19.5)
+  // Card width: sized for 13 cards, never shrinks as cards are played
   const cardMinPx = useMemo(() => {
     const targetRatio = 0.25;
     const viewportArea = resp.vw * resp.vh;
-    const numCards = humanHandLen || 13;
-    const cardAreaTarget = viewportArea * targetRatio / (numCards / 13);
-    const cardW = Math.sqrt(cardAreaTarget / (1.5 * numCards));
+    const cardW = Math.sqrt(viewportArea * targetRatio / (1.5 * 13));
     return Math.round(Math.max(30, Math.min(cardW, 120)));
-  }, [resp.vw, resp.vh, humanHandLen]);
+  }, [resp.vw, resp.vh]);
 
   // Final rendered card width — what CSS actually uses
   const cardW = Math.round(cardMinPx);
@@ -353,7 +348,7 @@ function App() {
   const handSafeGap = useMemo(() => {
     // Start with 5px overlap, increase by 1px if total span exceeds available width
     const availW = handWrapperW > 0 ? handWrapperW : resp.vw - 32;
-    const numCards = humanHandLen || 13;
+    const numCards = 13; // always layout for 13 cards so spacing never changes
     let safeGap = -5;
     let totalSpan = cardW + (numCards - 1) * (cardW + safeGap);
     // Keep increasing overlap by 1px until it fits
@@ -383,7 +378,7 @@ function App() {
       handWrapperW_isZero: handWrapperW === 0,
     });
     return { safeGap, totalSpan, offset };
-  }, [cardW, resp.vw, resp.vh, handWrapperW, humanHandLen]);
+  }, [cardW, resp.vw, resp.vh, handWrapperW]);
 
   // ═══════════════════════════════════════════════════════════
   // TABLE RESPONSIVE PARAMS — computed here, passed to Table
