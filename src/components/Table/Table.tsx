@@ -58,22 +58,26 @@ const Table: React.FC<TableProps> = memo(({
 
   // ── Layout strategy: position AI hands first, then place table to fill the rest ──
 
+  // AI card actual rendered size (small mode: minPx × minPx*1.5)
+  const aiCardW = aiCardMinPx;
+  const aiCardH = Math.round(aiCardMinPx * 1.5);
+
   // Top AI hand: horizontal fan, pinned to top edge, horizontally centered
-  const topFanW = (13 - 1) * fanStepX + cardW;
+  const topFanW = (13 - 1) * fanStepX + aiCardW;
   const topHandLeft = (cw - topFanW) / 2;
   const topHandTop = 0;
-  const topHandBottom = topHandTop + cardH;
+  const topHandBottom = topHandTop + aiCardH;
 
   // Left AI hand: vertical fan, pinned to left edge, vertically centered
-  const leftFanH = (13 - 1) * fanStepY + cardH;
+  const leftFanH = (13 - 1) * fanStepY + aiCardH;
   const leftHandLeft = 0;
   const leftHandTop = (ch - leftFanH) / 2;
-  const leftHandRight = leftHandLeft + cardW;
+  const leftHandRight = leftHandLeft + aiCardW;
 
   // Right AI hand: vertical fan, pinned to right edge, vertically centered
-  const rightHandLeft = cw - cardW;
+  const rightHandLeft = cw - aiCardW;
   const rightHandTop = (ch - leftFanH) / 2;
-  const rightHandBottom = rightHandTop + cardH;
+  const rightHandBottom = rightHandTop + aiCardH;
 
   // Table fills the space between AI hands
   const tableLeft = leftHandRight;
@@ -136,8 +140,8 @@ const Table: React.FC<TableProps> = memo(({
                     position: 'absolute',
                     left: isHorizontal ? `${ci * fanSpacing}px` : '0px',
                     top: isHorizontal ? '0px' : `${ci * fanSpacing}px`,
-                    width: `${cardW}px`,
-                    height: `${cardH}px`,
+                    width: `${aiCardMinPx}px`,
+                    height: `${Math.round(aiCardMinPx * 1.5)}px`,
                   }}
                 >
                   <CardComponent
