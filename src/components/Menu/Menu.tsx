@@ -6,14 +6,12 @@ interface MenuProps {
   onStartSingle: () => void;
   onStartLanHost: (roomId: string) => void;
   onStartLanJoin: (roomCode: string) => void;
-  onStartLocal: () => void;
 }
 
 const Menu: React.FC<MenuProps> = memo(({
   onStartSingle,
   onStartLanHost,
   onStartLanJoin,
-  onStartLocal,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showLanPanel, setShowLanPanel] = useState(false);

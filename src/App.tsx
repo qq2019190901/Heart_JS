@@ -12,7 +12,7 @@ import { heartsAreBroken, canPlayCard, getAllPlayableCards } from './game/rules'
 import { useResponsive } from './hooks/useResponsive';
 import { lanPeer, LanPeerManager } from './network/lan-peer';
 
-type GameMode = 'single' | 'local' | 'lan';
+type GameMode = 'single' | 'lan';
 
 function App() {
   const [mode, setMode] = useState<GameMode | null>(null);
@@ -392,14 +392,17 @@ function App() {
     const aiCardMinPx = Math.round(28 + tableT * 72);
     const _cardW = Math.max(aiCardMinPx, Math.round(resp.vw * 0.09));
     const _cardH = Math.max(aiCardMinPx * 2, Math.round(resp.vh * 0.126));
+    // Trick cards are larger than AI hand cards
+    const trickCardMinPx = Math.round(aiCardMinPx * 1.6);
     return {
       aiCardMinPx,
+      trickCardMinPx,
       cardW: _cardW,
       cardH: _cardH,
       tablePad: Math.round(2 + tableT * 4),
       aiHandOffset: Math.round(8 + tableT * 52),
       trickOverlapBase: Math.round(12 + tableT * 24),
-      trickOverlapStep: Math.max(4, Math.round(4 + tableT * 10)),
+      trickOverlapStep: Math.max(8, Math.round(8 + tableT * 14)),
       badgeOff: Math.round(8 + tableT * 10),
       badgeFontSizePx: Math.round(9 + tableT * 5),
       scoreFontSizePx: Math.round(8 + tableT * 4),
@@ -430,23 +433,6 @@ function App() {
       }
     }, 500);
   }, [playerName]);
-
-  const startLocal = useCallback(() => {
-    const players: Player[] = [
-      { id: 'p0', name: '玩家1', isHuman: true, score: 0 },
-      { id: 'p1', name: '玩家2', isHuman: true, score: 0 },
-      { id: 'p2', name: '玩家3', isHuman: true, score: 0 },
-      { id: 'p3', name: '玩家4', isHuman: true, score: 0 },
-    ];
-    const state = createInitialState(players);
-    setGameState(state);
-    setMode('local');
-    setTimeout(() => {
-      const dealt = dealCardsForRound(state, state.roundNumber);
-      setGameState(dealt);
-      setShowPassUI(true);
-    }, 500);
-  }, []);
 
   // ========== LAN: AI Turn Handling ==========
 
@@ -510,10 +496,10 @@ function App() {
     gameStateRef.current = gameState;
   }, [gameState]);
 
-  // ========== Common: AI Turn (single/local modes only) ==========
+  // ========== Common: AI Turn (single mode only) ==========
 
   useEffect(() => {
-    if (mode !== 'single' && mode !== 'local') return;
+    if (mode !== 'single') return;
     if (!gameState || gameState.phase !== 'playing') return;
     if (showPassUI) setShowPassUI(false);
     if (gameState.trickJustCompleted) return;
@@ -625,7 +611,7 @@ function App() {
       return;
     }
 
-    // Local/single: apply locally
+    // single: apply locally
     const prevSelection = new Set(selectedPassCardIds);
     setSelectedPassCardIds(new Set());
     const humanHand = gameState.hands.get(humanId) || [];
@@ -665,7 +651,7 @@ function App() {
         onStartSingle={startSingle}
         onStartLanHost={handleLanCreateRoom}
         onStartLanJoin={handleLanJoinRoom}
-        onStartLocal={startLocal}
+
       />
     );
   }

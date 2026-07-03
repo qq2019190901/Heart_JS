@@ -21,6 +21,7 @@ interface TableProps {
   scoreFontSizePx: number;
   fanStepX: number;
   fanStepY: number;
+  trickCardMinPx?: number;
   turnStatus?: React.ReactNode;
 }
 
@@ -28,7 +29,7 @@ const Table: React.FC<TableProps> = memo(({
   trick, currentPlayerId, humanPlayerId, players, aiHands = new Map(),
   aiCardMinPx, cardW, cardH, tablePad, aiHandOffset,
   trickOverlapBase, trickOverlapStep, badgeOff, badgeFontSizePx, scoreFontSizePx,
-  fanStepX, fanStepY,
+  fanStepX, fanStepY, trickCardMinPx,
   turnStatus,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -318,7 +319,7 @@ const Table: React.FC<TableProps> = memo(({
                   }}
                   aria-label={`${play.playerId} 出牌: ${play.card.rank}${play.card.suit}`}
                 >
-                  <CardComponent card={play.card} faceDown={false} small minPx={aiCardMinPx} />
+                  <CardComponent card={play.card} faceDown={false} small minPx={trickCardMinPx ?? aiCardMinPx} />
                 </div>
               );
             })}
