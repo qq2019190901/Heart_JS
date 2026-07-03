@@ -314,17 +314,9 @@ function App() {
   // Must be defined here for hooks ordering (before any conditional returns)
   const humanHandLen = gameState ? (gameState.hands?.get(humanId) || []).length : 0;
 
-  // Measure the hand wrapper div's actual rendered width
-  const handWrapperRef = useRef<HTMLDivElement>(null);
-  const [handWrapperW, setHandWrapperW] = useState(0);
-
-  // Force re-read on every render cycle
-  useLayoutEffect(() => {
-    const el = handWrapperRef.current;
-    if (!el) return;
-    const w = Math.round(el.getBoundingClientRect().width);
-    if (w > 0) setHandWrapperW(w);
-  });
+  // ═══════════════════════════════════════════════════════════
+  // TABLE RESPONSIVE PARAMS — computed here, passed to Table
+  // ═══════════════════════════════════════════════════════════
 
   // Card width: sized for 13 cards, never shrinks as cards are played
   const cardMinPx = useMemo(() => {
@@ -337,52 +329,20 @@ function App() {
   // Final rendered card width — what CSS actually uses
   const cardW = Math.round(cardMinPx);
 
-  // Smooth hand overlap: interpolate between -10 (small) and -4 (large)
-  const smoothHandGap = useMemo(() => {
-    const d = resp.minDim;
-    if (d < 450) return -10 + (d - 300) / 150 * 6;
-    if (d < 800) return -4 + (d - 450) / 350 * 0;
-    return -4;
-  }, [resp.minDim]);
-
+  // Hand overlap gap: cards overlap by this amount (negative = overlap)
   const handSafeGap = useMemo(() => {
     // Start with 5px overlap, increase by 1px if total span exceeds available width
-    const availW = handWrapperW > 0 ? handWrapperW : resp.vw - 32;
-    const numCards = 13; // always layout for 13 cards so spacing never changes
+    const availW = resp.vw - 32;
+    const numCards = 13;
     let safeGap = -5;
+    // First card has marginLeft: 0, remaining 12 cards each add (cardW + safeGap)
     let totalSpan = cardW + (numCards - 1) * (cardW + safeGap);
-    // Keep increasing overlap by 1px until it fits
     while (totalSpan > availW) {
       safeGap -= 1;
       totalSpan = cardW + (numCards - 1) * (cardW + safeGap);
     }
-    // Center the hand: first card gets a negative marginLeft to shift left,
-    // balancing the flex container so the visual center aligns with container center
-    const containerCenter = availW / 2;
-    const handCenter = totalSpan / 2;
-    const offset = containerCenter - handCenter;
-
-    const cardArea = cardW * (cardW * 1.5) * numCards;
-    const viewportArea = resp.vw * resp.vh;
-    const handArea = totalSpan * (cardW * 1.5) * 1;
-    console.log('[HAND]', {
-      cardW, safeGap, numCards, totalSpan, availW,
-      handWrapperW, respVw: resp.vw, respVh: resp.vh,
-      cardArea, viewportArea, handArea,
-      handPercent: `${(handArea / viewportArea * 100).toFixed(1)}%`,
-      cardPercent: `${(cardArea / viewportArea * 100).toFixed(1)}%`,
-      handTotalSpan: totalSpan,
-      containerWidth: availW,
-      overflows: totalSpan > availW + 10,
-      offset,
-      handWrapperW_isZero: handWrapperW === 0,
-    });
-    return { safeGap, totalSpan, offset };
-  }, [cardW, resp.vw, resp.vh, handWrapperW]);
-
-  // ═══════════════════════════════════════════════════════════
-  // TABLE RESPONSIVE PARAMS — computed here, passed to Table
-  // ═══════════════════════════════════════════════════════════
+    return { safeGap };
+  }, [cardW, resp.vw]);
   const tableT = useMemo(() => {
     const d = Math.max(300, Math.min(resp.vw, resp.vh));
     return (d - 300) / 1100;
@@ -878,8 +838,9 @@ function App() {
         </div>
       </div>
 
-      {/* Table area */}
-      <div className="flex-1 flex items-center justify-center p-0.5 sm:p-4 min-h-0 overflow-visible -mx-0.5 sm:-mx-4">
+      {/* Table area — unified arena with hand, overflow-hidden keeps table inside */}
+      <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden">
+        <div className="flex-1 flex items-center justify-center p-0.5 sm:p-4 min-h-0 -mx-0.5 sm:-mx-4">
         <Table
           trick={gameState.currentTrick}
           currentPlayerId={gameState.currentPlayerId}
@@ -901,10 +862,11 @@ function App() {
             )
           }
         />
+        </div>
       </div>
 
       {/* Bottom: hand only */}
-      <div ref={handWrapperRef} className="shrink-0 flex flex-col items-center w-full pb-1 sm:pb-3 pt-2 px-0.5 sm:px-4 relative z-10" style={{ marginTop: '4px' }}>
+      <div className="shrink-0 flex flex-col items-center w-full pb-1 sm:pb-3 pt-2 px-0.5 sm:px-4 relative z-10" style={{ marginTop: '4px' }}>
 
         {/* Player hand */}
         <div
@@ -913,6 +875,8 @@ function App() {
             maxHeight: handMaxH,
             gap: 0,
             justifyContent: 'flex-start',
+            marginLeft: 'auto',
+            marginRight: 'auto',
           }}
           role="list"
           aria-label="你的手牌"
@@ -920,14 +884,13 @@ function App() {
           {humanHand.map((card, idx) => {
             const playable = playableIds.has(card.id);
             const isCurrentPlayer = gameState.currentPlayerId === humanId;
-            const ml = idx === 0 ? handSafeGap.offset : handSafeGap.safeGap;
             return (
               <div
                 key={card.id}
                 className="transition-transform duration-150"
                 style={{
                   transform: !playable && isCurrentPlayer ? 'scale(0.92) brightness(0.7)' : undefined,
-                  marginLeft: ml,
+                  marginLeft: idx === 0 ? 0 : handSafeGap.safeGap,
                   flexShrink: 0,
                   minWidth: 0,
                 }}

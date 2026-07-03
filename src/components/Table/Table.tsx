@@ -73,18 +73,19 @@ const Table: React.FC<TableProps> = memo(({
   const leftFanH = (13 - 1) * fanStepY + aiCardH;
   const leftHandLeft = 0;
   const leftHandTop = (ch - leftFanH) / 2;
+  const leftHandBottom = leftHandTop + leftFanH;
   const leftHandRight = leftHandLeft + aiCardW;
 
   // Right AI hand: vertical fan, pinned to right edge, vertically centered
   const rightHandLeft = cw - aiCardW;
   const rightHandTop = (ch - leftFanH) / 2;
-  const rightHandBottom = rightHandTop + aiCardH;
+  const rightHandBottom = rightHandTop + leftFanH;
 
   // Table fills the space between AI hands
   const tableLeft = leftHandRight;
   const tableTop = topHandBottom;
   const tableRight = rightHandLeft;
-  const tableBottom = ch; // extends to bottom (below table is human hand area)
+  const tableBottom = ch;
   const tableW = tableRight - tableLeft;
   const tableH = tableBottom - tableTop;
 
@@ -283,7 +284,7 @@ const Table: React.FC<TableProps> = memo(({
 
       {/* ── Table (green felt) ───────────────────────────────────── */}
       <div
-        className="rounded-xl border-amber-900/60 shadow-2xl overflow-visible"
+        className="rounded-xl border-amber-900/60 shadow-2xl overflow-hidden"
         style={{
           position: 'absolute',
           left: `${tableLeft}px`,
