@@ -672,137 +672,6 @@ function App() {
     );
   }
 
-  // ========== Passing Phase ==========
-
-  if (gameState.phase === 'passing') {
-    // DEBUG: log hands state
-    console.log('[PASS PHASE] humanId:', humanId, 'handsKeys:', Array.from(gameState.hands?.keys() || []));
-    const humanHand = gameState.hands.get(humanId) || [];
-    console.log('[PASS PHASE] humanHand length:', humanHand.length);
-    const maxPass = Math.min(3, Math.floor(humanHand.length / 4));
-
-    const togglePassCard = (cardId: string) => {
-      setSelectedPassCardIds(prev => {
-        const newSet = new Set(prev);
-        if (newSet.has(cardId)) newSet.delete(cardId);
-        else if (newSet.size < maxPass) newSet.add(cardId);
-        return newSet;
-      });
-    };
-
-    const passDir: PassDirection = gameState.passedDirections[humanId] ?? 'none';
-    const passLabel = passDir === 'left' ? '← 左侧玩家' : passDir === 'right' ? '→ 右侧玩家' : passDir === 'across' ? '↑ 对面玩家' : '无';
-    const selectedArr = humanHand.filter(c => selectedPassCardIds.has(c.id));
-
-    // Responsive passing phase
-    const passCardMinPx = resp.minDim < 450 ? 28 : resp.minDim < 600 ? 36 : resp.maxDim > 1200 ? 64 : 48;
-    const sectionGap = resp.minDim < 450 ? '8px' : resp.minDim < 600 ? '12px' : '24px';
-    const titleSize = resp.minDim < 450 ? 'text-base' : resp.minDim < 600 ? 'text-xl' : 'text-2xl';
-    const bodySize = resp.minDim < 450 ? 'text-[10px]' : resp.minDim < 600 ? 'text-xs' : 'text-sm';
-    const btnFontSize = resp.minDim < 450 ? 'text-xs' : resp.minDim < 600 ? 'text-sm' : 'text-base';
-    const confirmBtnPadding = resp.minDim < 450 ? 'px-3 py-1.5' : resp.minDim < 600 ? 'px-5 py-2' : 'px-6 py-2.5';
-
-    return (
-      <div className="min-h-screen min-h-dvh flex flex-col overflow-hidden" style={{
-        background: 'linear-gradient(180deg, #0d5e28 0%, #094a20 100%)',
-      }}>
-        {/* Top bar */}
-        <div className="flex items-center justify-between px-2 py-1 sm:px-3 sm:py-1.5 bg-black/0 shrink-0 fixed top-0 left-0 right-0 z-50">
-          <button
-            className="text-white/60 hover:text-white transition-colors"
-            style={resp.compactFactor < 0.5 ? { fontSize: '11px' } : {}}
-            onClick={() => setMode(null)}
-          >
-            ← 菜单
-          </button>
-          <div
-            className="text-white/50 font-medium"
-            style={resp.compactFactor < 0.2 ? { fontSize: '10px' } : resp.compactFactor < 0.5 ? { fontSize: '11px' } : {}}
-          >
-            第 {gameState.roundNumber} 回合 — 传牌阶段
-          </div>
-        </div>
-
-        {/* Main content */}
-        <div className="flex-1 flex flex-col items-center justify-center gap-3 sm:gap-4 px-2 min-h-0"
-          style={{ gap: sectionGap }}>
-          {/* Title */}
-          <div className="text-center">
-            <h2 className={`text-white font-bold mb-0.5 ${titleSize}`}>传牌阶段</h2>
-            <p className={`text-white/70 ${bodySize}`}>
-              向 <span className="text-yellow-300 font-semibold">{passLabel}</span> 选择 {maxPass} 张牌
-            </p>
-          </div>
-
-          {/* Waiting for others */}
-          {mode === 'lan' && (lanClientSentPass || lanPassSending) ? (
-            <div className="text-center py-4 sm:py-8">
-              <div className={`text-white/70 font-semibold ${resp.isVeryCompact ? 'text-base' : 'text-lg'}`}>
-                {lanPassSending ? '已传递，等待其他玩家...' : '已传递，等待其他玩家...'}
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* Selected cards preview */}
-              {selectedArr.length > 0 ? (
-                <div className="flex flex-wrap justify-center gap-1 sm:gap-2 px-2">
-                  {selectedArr.map((card) => (
-                    <div key={card.id} className="relative cursor-pointer" onClick={() => togglePassCard(card.id)}>
-                      <CardComponent card={card} small minPx={passCardMinPx} />
-                      <div className="absolute -top-1.5 -right-1.5 sm:-top-2 sm:-right-2 bg-red-500 text-white text-[8px] sm:text-[10px] w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center font-bold shadow-md">✕</div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className={`text-white/50 italic ${bodySize}`}>请选择要传递的牌</div>
-              )}
-
-              {/* Hand */}
-              <div className="w-full max-w-lg px-1">
-                <div className={`text-white/50 text-center mb-1 ${bodySize}`}>你的手牌（点击选择）</div>
-                <div
-                  className="flex items-end justify-center gap-0.5 flex-wrap"
-                  style={{ maxHeight: `clamp(100px, 40dvh, ${resp.isVeryCompact ? '140px' : '250px'})` }}
-                >
-                  {humanHand.map((card, idx) => {
-                    const isSelected = selectedPassCardIds.has(card.id);
-                    return (
-                      <div
-                        key={card.id}
-                        className={`transition-all duration-200 ${isSelected ? 'opacity-50' : ''}`}
-                        style={{
-                          transform: isSelected ? 'scale(0.9)' : undefined,
-                          marginLeft: idx > 0 ? -6 : 0,
-                          cursor: isSelected || selectedPassCardIds.size < maxPass ? 'pointer' : 'default',
-                        }}
-                        onClick={() => togglePassCard(card.id)}
-                      >
-                        <CardComponent card={card} small minPx={passCardMinPx} />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Confirm button */}
-              <button
-                onClick={handlePassConfirm}
-                disabled={selectedPassCardIds.size !== maxPass}
-                className={`font-bold rounded-lg transition-colors shadow-lg ${confirmBtnPadding} ${btnFontSize} ${
-                  selectedPassCardIds.size === maxPass
-                    ? 'bg-yellow-500 hover:bg-yellow-400 text-gray-900'
-                    : 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                }`}
-              >
-                确认传递 ✓
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-    );
-  }
-
   // ========== Playing Phase ==========
 
   const humanHand = gameState.hands.get(humanId) || [];
@@ -814,6 +683,30 @@ function App() {
   const handMaxH = resp.vh < 400 ? '80px' : resp.vh < 500 ? '100px' : resp.vh < 650 ? '130px' : resp.vh < 800 ? '150px' : undefined;
   const topBarFontSize = resp.compactFactor < 0.2 ? '10px' : resp.compactFactor < 0.5 ? '11px' : undefined;
   const statusFontSize = resp.compactFactor < 0.2 ? '9px' : resp.compactFactor < 0.5 ? '11px' : undefined;
+
+  // ── Passing phase helpers (same logic, integrated into game layout) ──
+
+  const isPassingPhase = gameState.phase === 'passing';
+  const passDir: PassDirection = isPassingPhase ? (gameState.passedDirections[humanId] ?? 'none') : 'none';
+  const passLabel = passDir === 'left' ? '← 左侧玩家' : passDir === 'right' ? '→ 右侧玩家' : passDir === 'across' ? '↑ 对面玩家' : '无';
+  const maxPass = isPassingPhase ? Math.min(3, Math.floor(humanHand.length / 4)) : 0;
+
+  const togglePassCard = (cardId: string) => {
+    if (!isPassingPhase) return;
+    setSelectedPassCardIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(cardId)) {
+        newSet.delete(cardId);
+        return newSet;
+      }
+      if (newSet.size < maxPass) {
+        newSet.add(cardId);
+      }
+      return newSet;
+    });
+  };
+
+  const selectedPassArr = humanHand.filter(c => selectedPassCardIds.has(c.id));
 
   return (
     <div className="relative w-full h-full flex flex-col overflow-visible" style={{
@@ -834,7 +727,7 @@ function App() {
           style={topBarFontSize ? { fontSize: topBarFontSize } : {}}
           aria-live="polite"
         >
-          {mode === 'lan' ? `LAN · ${lanRoomCode}` : `第 ${gameState.roundNumber} 回合`}
+          {mode === 'lan' ? `LAN · ${lanRoomCode}` : isPassingPhase ? `第 ${gameState.roundNumber} 回合 — 传牌` : `第 ${gameState.roundNumber} 回合`}
         </div>
       </div>
 
@@ -851,7 +744,14 @@ function App() {
           aiHands={gameState.hands}
           {...tableParams}
           turnStatus={
-            gameState.currentPlayerId === humanId && !waitingForAi ? (
+            isPassingPhase ? (
+              <div className="text-center">
+                <div className="text-white/90 font-bold text-sm">传牌阶段</div>
+                <div className="text-white/60 text-xs">
+                  向 <span className="text-yellow-300 font-semibold">{passLabel}</span> 选择 {maxPass} 张牌
+                </div>
+              </div>
+            ) : gameState.currentPlayerId === humanId && !waitingForAi ? (
               <div className="text-green-300 animate-pulse font-semibold">轮到你了！</div>
             ) : waitingForAi ? (
               <div className="text-white/50">AI 思考中...</div>
@@ -861,6 +761,28 @@ function App() {
               </div>
             )
           }
+          passConfirmAction={isPassingPhase ? (
+            <>
+              <button
+                onClick={handlePassConfirm}
+                disabled={selectedPassCardIds.size !== maxPass}
+                className={`font-bold rounded-lg transition-colors shadow-lg ${
+                  resp.minDim < 450 ? 'px-2 py-0.5 text-[10px]' : resp.minDim < 600 ? 'px-3 py-1 text-xs' : 'px-4 py-1.5 text-sm'
+                } ${
+                  selectedPassCardIds.size === maxPass
+                    ? 'bg-yellow-500 hover:bg-yellow-400 text-gray-900'
+                    : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                }`}
+              >
+                确认传递 ✓
+              </button>
+              {mode === 'lan' && (lanClientSentPass || lanPassSending) && (
+                <div className="text-white/70 font-semibold text-[10px]">
+                  {lanPassSending ? '已传递，等待其他玩家...' : '已传递，等待其他玩家...'}
+                </div>
+              )}
+            </>
+          ) : undefined}
         />
         </div>
       </div>
@@ -868,52 +790,99 @@ function App() {
       {/* Bottom: hand only */}
       <div className="shrink-0 flex flex-col items-center w-full pb-1 sm:pb-3 pt-2 px-0.5 sm:px-4 relative z-10" style={{ marginTop: '4px' }}>
 
-        {/* Player hand */}
-        <div
-          className="flex items-end px-0.5 sm:px-2 overflow-visible"
-          style={{
-            maxHeight: handMaxH,
-            gap: 0,
-            justifyContent: 'flex-start',
-            marginLeft: 'auto',
-            marginRight: 'auto',
-          }}
-          role="list"
-          aria-label="你的手牌"
-        >
-          {humanHand.map((card, idx) => {
-            const playable = playableIds.has(card.id);
-            const isCurrentPlayer = gameState.currentPlayerId === humanId;
-            return (
-              <div
-                key={card.id}
-                className="transition-transform duration-150"
-                style={{
-                  transform: !playable && isCurrentPlayer ? 'scale(0.92) brightness(0.7)' : undefined,
-                  marginLeft: idx === 0 ? 0 : handSafeGap.safeGap,
-                  flexShrink: 0,
-                  minWidth: 0,
-                }}
-                role="listitem"
-              >
-                <CardComponent
-                  card={card}
-                  onClick={() => {
-                    if (isCurrentPlayer && playable) {
-                      if (mode === 'lan') lanPeer.sendToHost('play-card', { cardId: card.id, type: 'play-card' });
-                      else handleCardClick(card);
-                    }
+        {isPassingPhase ? (
+          /* ── Passing Phase UI ── */
+          <>
+            {/* Hand — selectable cards */}
+            <div
+              className="flex items-end px-0.5 sm:px-2 overflow-visible"
+              style={{
+                maxHeight: handMaxH,
+                gap: 0,
+                justifyContent: 'flex-start',
+                marginLeft: 'auto',
+                marginRight: 'auto',
+              }}
+              role="list"
+              aria-label="你的手牌（点击选择传递）"
+            >
+              {humanHand.map((card, idx) => {
+                const isSelected = selectedPassCardIds.has(card.id);
+                return (
+                  <div
+                    key={card.id}
+                    className="transition-all duration-200"
+                    style={{
+                      transform: isSelected ? `translateY(-${cardMinPx * 0.3}px)` : undefined,
+                      marginLeft: idx === 0 ? 0 : handSafeGap.safeGap,
+                      flexShrink: 0,
+                      minWidth: 0,
+                      cursor: 'pointer',
+                    }}
+                    role="listitem"
+                    onClick={() => togglePassCard(card.id)}
+                  >
+                    <CardComponent
+                      card={card}
+                      selected={isSelected}
+                      animate={false}
+                      small
+                      minPx={cardMinPx}
+                      ariaLabel={`${card.rank} of ${card.suit}（点击选择传递）`}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          /* ── Playing Phase Hand ── */
+          <div
+            className="flex items-end px-0.5 sm:px-2 overflow-visible"
+            style={{
+              maxHeight: handMaxH,
+              gap: 0,
+              justifyContent: 'flex-start',
+              marginLeft: 'auto',
+              marginRight: 'auto',
+            }}
+            role="list"
+            aria-label="你的手牌"
+          >
+            {humanHand.map((card, idx) => {
+              const playable = playableIds.has(card.id);
+              const isCurrentPlayer = gameState.currentPlayerId === humanId;
+              return (
+                <div
+                  key={card.id}
+                  className="transition-transform duration-150"
+                  style={{
+                    transform: !playable && isCurrentPlayer ? 'scale(0.92) brightness(0.7)' : undefined,
+                    marginLeft: idx === 0 ? 0 : handSafeGap.safeGap,
+                    flexShrink: 0,
+                    minWidth: 0,
                   }}
-                  disabled={!isCurrentPlayer || waitingForAi || (!playable && isCurrentPlayer)}
-                  animate={false}
-                  small
-                  minPx={cardMinPx}
-                  ariaLabel={`${card.rank} of ${card.suit}`}
-                />
-              </div>
-            );
-          })}
-        </div>
+                  role="listitem"
+                >
+                  <CardComponent
+                    card={card}
+                    onClick={() => {
+                      if (isCurrentPlayer && playable) {
+                        if (mode === 'lan') lanPeer.sendToHost('play-card', { cardId: card.id, type: 'play-card' });
+                        else handleCardClick(card);
+                      }
+                    }}
+                    disabled={!isCurrentPlayer || waitingForAi || (!playable && isCurrentPlayer)}
+                    animate={false}
+                    small
+                    minPx={cardMinPx}
+                    ariaLabel={`${card.rank} of ${card.suit}`}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

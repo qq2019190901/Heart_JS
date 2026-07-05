@@ -23,6 +23,7 @@ interface TableProps {
   fanStepY: number;
   trickCardMinPx?: number;
   turnStatus?: React.ReactNode;
+  passConfirmAction?: React.ReactNode;
 }
 
 const Table: React.FC<TableProps> = memo(({
@@ -31,6 +32,7 @@ const Table: React.FC<TableProps> = memo(({
   trickOverlapBase, trickOverlapStep, badgeOff, badgeFontSizePx, scoreFontSizePx,
   fanStepX, fanStepY, trickCardMinPx,
   turnStatus,
+  passConfirmAction,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState(() => ({
@@ -257,30 +259,36 @@ const Table: React.FC<TableProps> = memo(({
               >
                 {humanPlayer.score} 分
               </span>
+              {passConfirmAction}
             </div>
           </div>
         );
       })()}
 
-      {/* ── Turn Status (above table bottom edge) ────────────────── */}
-      {turnStatus && (
-        <div
-          className="pointer-events-none"
-          style={{
-            position: 'absolute',
-            left: `${tcx}px`,
-            top: `${tableBottom - 40}px`,
-            transform: 'translate(-50%, 0)',
-            zIndex: 10,
-          }}
-          aria-live="polite"
-          role="status"
-        >
-          <div style={{ fontSize: `${badgeFontSizePx}px` }}>
-            {turnStatus}
+      {/* ── Turn Status (above human badge) ──────────────────────── */}
+      {turnStatus && (() => {
+        // Place turnStatus above the human badge, with enough clearance
+        const badgeBottom = tableBottom - badgeOff;
+        const statusTop = badgeBottom - 50; // 50px above badge center
+        return (
+          <div
+            className="pointer-events-none"
+            style={{
+              position: 'absolute',
+              left: `${tcx}px`,
+              top: `${statusTop}px`,
+              transform: 'translate(-50%, 0)',
+              zIndex: 11,
+            }}
+            aria-live="polite"
+            role="status"
+          >
+            <div style={{ fontSize: `${badgeFontSizePx}px` }}>
+              {turnStatus}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── Table (green felt) ───────────────────────────────────── */}
       <div

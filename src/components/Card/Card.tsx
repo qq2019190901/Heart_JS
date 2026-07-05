@@ -107,7 +107,7 @@ const CardComponent: React.FC<CardComponentProps> = memo(({
         height: cardH,
         backgroundColor: faceDown ? 'var(--color-card-face-down-top, #1a5276)' : 'white',
         boxShadow,
-        transform: hovered && !disabled && !faceDown ? 'translateY(-8px) scale(1.05)' : undefined,
+        transform: (hovered && !disabled && !faceDown && !selected) ? 'translateY(-8px) scale(1.05)' : undefined,
         transition: 'transform 0.15s ease-out, box-shadow 0.15s ease-out',
         willChange: hovered ? 'transform' : undefined,
         WebkitBackfaceVisibility: 'hidden',
