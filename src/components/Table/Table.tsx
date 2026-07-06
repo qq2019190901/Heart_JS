@@ -24,6 +24,7 @@ interface TableProps {
   trickCardMinPx?: number;
   turnStatus?: React.ReactNode;
   passConfirmAction?: React.ReactNode;
+  settlementCards?: Record<string, Card[]>;
 }
 
 const Table: React.FC<TableProps> = memo(({
@@ -33,6 +34,7 @@ const Table: React.FC<TableProps> = memo(({
   fanStepX, fanStepY, trickCardMinPx,
   turnStatus,
   passConfirmAction,
+  settlementCards,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState(() => ({
@@ -102,7 +104,8 @@ const Table: React.FC<TableProps> = memo(({
       {/* ── AI Hands ─────────────────────────────────────────────── */}
       {players.map((player, idx) => {
         if (!player.isAi) return null;
-        const aiCards = (aiHands instanceof Map ? aiHands.get(player.id) : undefined) || [];
+        const settlement = settlementCards?.[player.id]?.filter(c => c.suit === 'hearts' || (c.suit === 'spades' && c.rank === 12)) || [];
+        const aiCards = settlement.length > 0 ? settlement : (aiHands instanceof Map ? aiHands.get(player.id) : undefined) || [];
         const displayCount = aiCards.length > 0 ? aiCards.length : 13;
         const side = sideForIdx(idx);
 
@@ -150,7 +153,7 @@ const Table: React.FC<TableProps> = memo(({
                 >
                   <CardComponent
                     card={card}
-                    faceDown
+                    faceDown={settlement.length === 0}
                     small
                     minPx={aiCardMinPx}
                     animate={false}

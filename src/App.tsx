@@ -2,7 +2,6 @@ import React, { useState, useCallback, useEffect, useLayoutEffect, useRef, useMe
 import { Menu } from './components/Menu/Menu';
 import { CardComponent } from './components/Card/Card';
 import { Table } from './components/Table/Table';
-import { ScoreBoard } from './components/ScoreBoard/ScoreBoard';
 import { LanLobby } from './components/Lan/LanLobby';
 import type { GameState, Card, Player, PassDirection } from './game/types';
 import { createInitialState, dealCardsForRound, applyCardPass, playCard } from './game/hearts-game';
@@ -633,27 +632,6 @@ function App() {
     );
   }
 
-  // ========== Game Over / Round Over ==========
-
-  if (roundOver || gameOver) {
-    const allScores = gameState?.players.map(p => ({
-      id: p.id,
-      name: p.name,
-      score: gameState.scores[p.id] ?? 0,
-    })) || [];
-
-    return (
-      <ScoreBoard
-        players={allScores}
-        roundNumber={gameState?.roundNumber ?? 1}
-        showSummary={gameOver}
-        trickCardsWon={gameState?.trickCardsWon}
-        onContinue={handleContinue}
-        onRestart={handleRestart}
-      />
-    );
-  }
-
   // ========== Loading States ==========
 
   if (!gameState) {
@@ -707,6 +685,11 @@ function App() {
   };
 
   const selectedPassArr = humanHand.filter(c => selectedPassCardIds.has(c.id));
+
+  // Settlement: human player's scoring cards
+  const isSettlement = roundOver || gameOver;
+  const settlementCards = isSettlement ? gameState!.trickCardsWon : undefined;
+  const humanScoringCards = isSettlement ? (settlementCards?.[humanId] || []).filter(c => c.suit === 'hearts' || (c.suit === 'spades' && c.rank === 12)) : [];
 
   return (
     <div className="relative w-full h-full flex flex-col overflow-visible" style={{
@@ -783,6 +766,7 @@ function App() {
               )}
             </>
           ) : undefined}
+          settlementCards={isSettlement ? gameState!.trickCardsWon : undefined}
         />
         </div>
       </div>
@@ -835,6 +819,41 @@ function App() {
               })}
             </div>
           </>
+        ) : isSettlement ? (
+          /* ── Settlement Phase Hand — show scoring cards ── */
+          <div
+            className="flex items-end px-0.5 sm:px-2 overflow-visible"
+            style={{
+              maxHeight: handMaxH,
+              gap: 0,
+              justifyContent: 'flex-start',
+              marginLeft: 'auto',
+              marginRight: 'auto',
+            }}
+            role="list"
+            aria-label="你的得分牌"
+          >
+            {humanScoringCards.map((card, idx) => (
+              <div
+                key={card.id}
+                className="transition-transform duration-150"
+                style={{
+                  marginLeft: idx === 0 ? 0 : handSafeGap.safeGap,
+                  flexShrink: 0,
+                  minWidth: 0,
+                }}
+                role="listitem"
+              >
+                <CardComponent
+                  card={card}
+                  animate={false}
+                  small
+                  minPx={cardMinPx}
+                  ariaLabel={`${card.rank} of ${card.suit}`}
+                />
+              </div>
+            ))}
+          </div>
         ) : (
           /* ── Playing Phase Hand ── */
           <div
@@ -884,6 +903,93 @@ function App() {
           </div>
         )}
       </div>
+
+      {/* Settlement overlay — roundOver / gameOver */}
+      {(roundOver || gameOver) && (() => {
+        const allScores = gameState!.players.map(p => {
+          const wonCards = gameState!.trickCardsWon?.[p.id] || [];
+          const roundScore = wonCards.filter(c => c.suit === 'hearts' || (c.suit === 'spades' && c.rank === 12)).reduce((sum, c) => sum + (c.suit === 'hearts' ? 1 : 13), 0);
+          return {
+            id: p.id,
+            name: p.name,
+            roundScore,
+            totalScore: gameState!.scores[p.id] ?? 0,
+          };
+        });
+        const sorted = [...allScores].sort((a, b) => a.totalScore - b.totalScore);
+        const isGameOver = gameOver;
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
+            <div className="absolute inset-0 bg-black/50" />
+            <div
+              className="relative z-10 rounded-2xl w-full max-w-sm sm:max-w-md"
+              style={{
+                background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+              }}
+              role="dialog"
+              aria-label={isGameOver ? '游戏结束' : `第 ${gameState!.roundNumber} 回合结束`}
+            >
+              <h2 className="text-lg sm:text-xl font-bold text-white text-center mb-2 sm:mb-3">
+                {isGameOver ? '游戏结束!' : `第 ${gameState!.roundNumber} 回合结束`}
+              </h2>
+
+              {/* Ranking table */}
+              <div className="space-y-1.5 sm:space-y-2 px-2 sm:px-4 mb-3 sm:mb-4">
+                {sorted.map((player, idx) => (
+                  <div
+                    key={player.id}
+                    className="rounded-lg p-1.5 sm:p-2"
+                    style={{
+                      background: idx === 0 ? 'rgba(46,204,113,0.2)' : 'rgba(255,255,255,0.05)',
+                      border: idx === 0 ? '1px solid rgba(46,204,113,0.3)' : '1px solid rgba(255,255,255,0.1)',
+                    }}
+                  >
+                    <div className="flex items-center gap-1 sm:gap-2">
+                      <span className="text-sm sm:text-base">{idx === 0 ? '👑' : `#${idx + 1}`}</span>
+                      <span className="text-white flex-1 font-medium text-xs sm:text-sm truncate">{player.name}</span>
+                      <span className={`font-bold text-xs sm:text-sm ${idx === 0 ? 'text-green-400' : 'text-white/70'}`}>
+                        {player.roundScore} 分
+                      </span>
+                      <span className="text-white/50 text-[10px] sm:text-xs">
+                        总计 {player.totalScore}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {isGameOver && (
+                <div className="text-center text-[10px] sm:text-xs text-white/40 mb-2 sm:mb-3">
+                  累计总分 · 先到100分者败
+                </div>
+              )}
+
+              {/* Buttons */}
+              <div className="flex gap-1.5 sm:gap-2 px-2 sm:px-4 pb-3 sm:pb-4">
+                {isGameOver ? (
+                  <button
+                    className="flex-1 rounded-xl font-semibold text-white py-2 sm:py-2.5 text-xs sm:text-sm"
+                    style={{ background: 'linear-gradient(135deg, #2ecc71, #27ae60)' }}
+                    onClick={handleRestart}
+                  >
+                    重新开始
+                  </button>
+                ) : (
+                  <button
+                    className="flex-1 rounded-xl font-semibold text-white/70 hover:text-white transition-all py-2 sm:py-2.5 text-xs sm:text-sm"
+                    style={{ background: 'rgba(255,255,255,0.1)' }}
+                    onClick={handleContinue}
+                  >
+                    下一回合
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
