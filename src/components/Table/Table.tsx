@@ -106,7 +106,7 @@ const Table: React.FC<TableProps> = memo(({
         if (!player.isAi) return null;
         const settlement = settlementCards?.[player.id]?.filter(c => c.suit === 'hearts' || (c.suit === 'spades' && c.rank === 12)) || [];
         const aiCards = settlement.length > 0 ? settlement : (aiHands instanceof Map ? aiHands.get(player.id) : undefined) || [];
-        const displayCount = aiCards.length > 0 ? aiCards.length : 13;
+        const displayCount = aiCards.length > 0 ? aiCards.length : 0;
         const side = sideForIdx(idx);
 
         // Fan direction

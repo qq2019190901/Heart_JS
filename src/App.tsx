@@ -7,7 +7,7 @@ import type { GameState, Card, Player, PassDirection } from './game/types';
 import { createInitialState, dealCardsForRound, applyCardPass, playCard } from './game/hearts-game';
 import { getAiDecision } from './game/ai';
 import { getAiPlayDecision } from './game/ai-turn';
-import { heartsAreBroken, canPlayCard, getAllPlayableCards } from './game/rules';
+import { heartsAreBroken, canPlayCard, getAllPlayableCards, isShotGunTheRose } from './game/rules';
 import { useResponsive } from './hooks/useResponsive';
 import { lanPeer, LanPeerManager } from './network/lan-peer';
 
@@ -385,10 +385,14 @@ function App() {
     setMode('single');
     setTimeout(() => {
       const dealt = dealCardsForRound(state, state.roundNumber);
-      setGameState(dealt);
-      if (dealt.phase === 'passing') {
-        setShowPassUI(true);
-        setSelectedPassCardIds(new Set());
+      if (dealt.passedDirections[dealt.players[0].id] === 'none') {
+        setGameState(applyCardPass(dealt));
+      } else {
+        setGameState(dealt);
+        if (dealt.phase === 'passing') {
+          setShowPassUI(true);
+          setSelectedPassCardIds(new Set());
+        }
       }
     }, 500);
   }, [playerName]);
@@ -535,12 +539,18 @@ function App() {
     setSelectedPassCardIds(new Set());
     setTimeout(() => {
       const dealt = dealCardsForRound(newState, newState.roundNumber);
-      setGameState(dealt);
-      if (dealt.phase === 'passing') {
-        setShowPassUI(true);
-        setSelectedPassCardIds(new Set());
+      if (dealt.passedDirections[dealt.players[0].id] === 'none') {
+        const afterApply = applyCardPass(dealt);
+        setGameState(afterApply);
+        if (mode === 'lan') lanPeer.broadcast(afterApply);
+      } else {
+        setGameState(dealt);
+        if (dealt.phase === 'passing') {
+          setShowPassUI(true);
+          setSelectedPassCardIds(new Set());
+        }
+        if (mode === 'lan') lanPeer.broadcast(dealt);
       }
-      if (mode === 'lan') lanPeer.broadcast(dealt);
     }, 500);
   }, [gameState, mode]);
 
@@ -594,10 +604,14 @@ function App() {
     setSelectedPassCardIds(new Set());
     setTimeout(() => {
       const dealt = dealCardsForRound(newState, newState.roundNumber);
-      setGameState(dealt);
-      if (dealt.phase === 'passing') {
-        setShowPassUI(true);
-        setSelectedPassCardIds(new Set());
+      if (dealt.passedDirections[dealt.players[0].id] === 'none') {
+        setGameState(applyCardPass(dealt));
+      } else {
+        setGameState(dealt);
+        if (dealt.phase === 'passing') {
+          setShowPassUI(true);
+          setSelectedPassCardIds(new Set());
+        }
       }
     }, 500);
   }, [gameState]);
@@ -908,7 +922,9 @@ function App() {
       {(roundOver || gameOver) && (() => {
         const allScores = gameState!.players.map(p => {
           const wonCards = gameState!.trickCardsWon?.[p.id] || [];
-          const roundScore = wonCards.filter(c => c.suit === 'hearts' || (c.suit === 'spades' && c.rank === 12)).reduce((sum, c) => sum + (c.suit === 'hearts' ? 1 : 13), 0);
+          const baseRoundScore = wonCards.filter(c => c.suit === 'hearts' || (c.suit === 'spades' && c.rank === 12)).reduce((sum, c) => sum + (c.suit === 'hearts' ? 1 : 13), 0);
+          const sgr = isShotGunTheRose(gameState!.trickCardsWon);
+          const roundScore = sgr.found ? (p.id === sgr.holderId ? 0 : 26) : baseRoundScore;
           return {
             id: p.id,
             name: p.name,
