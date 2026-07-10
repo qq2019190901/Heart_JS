@@ -55,6 +55,14 @@ export type PassDirection = 'left' | 'right' | 'across' | 'none';
 
 // ===== AI Types =====
 
+export interface AiContext {
+  scores: Record<string, number>;
+  roundNumber: number;
+  trickCardsWon: Record<string, Card[]>;
+  queenOfSpadesPlayed: boolean;
+  highestHeart: Card | null;
+}
+
 export interface AiDecision {
   cardIds: string[];
   delay: number; // ms

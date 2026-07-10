@@ -23,6 +23,15 @@ function App() {
   const [waitingForAi, setWaitingForAi] = useState(false);
   const [showPassUI, setShowPassUI] = useState(false);
   const [selectedPassCardIds, setSelectedPassCardIds] = useState<Set<string>>(new Set());
+  const [aiDifficulties, setAiDifficulties] = useState<Record<string, 'easy' | 'medium' | 'hard'>>(() => {
+    try {
+      const saved = localStorage.getItem('heart-ai-difficulties');
+      return saved ? JSON.parse(saved) : { 'ai-0': 'medium', 'ai-1': 'medium', 'ai-2': 'medium' };
+    } catch {
+      return { 'ai-0': 'medium', 'ai-1': 'medium', 'ai-2': 'medium' };
+    }
+  });
+  const [showDropdown, setShowDropdown] = useState(false);
   const aiTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const trickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const gameStateRef = useRef<GameState | null>(null);
@@ -42,6 +51,19 @@ function App() {
   const lanPassConfirmedRef = useRef<Set<string>>(new Set());
   const [lanClientSentPass, setLanClientSentPass] = useState(false);
   const lanPlayersRef = useRef<{ id: string; name: string; isAi: boolean }[]>([]);
+
+  // Persist AI difficulties
+  useEffect(() => {
+    localStorage.setItem('heart-ai-difficulties', JSON.stringify(aiDifficulties));
+  }, [aiDifficulties]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!showDropdown) return;
+    const handler = () => setShowDropdown(false);
+    document.addEventListener('click', handler);
+    return () => document.removeEventListener('click', handler);
+  }, [showDropdown]);
 
   // ========== LAN Deserializer ==========
 
@@ -375,9 +397,9 @@ function App() {
   const startSingle = useCallback(() => {
     const players: Player[] = [
       { id: 'human', name: playerName, isHuman: true, score: 0 },
-      { id: 'ai-0', name: 'AI 左', isAi: true, difficulty: 'medium', score: 0, isHuman: false },
-      { id: 'ai-1', name: 'AI 上', isAi: true, difficulty: 'medium', score: 0, isHuman: false },
-      { id: 'ai-2', name: 'AI 右', isAi: true, difficulty: 'medium', score: 0, isHuman: false },
+      { id: 'ai-0', name: 'AI 左', isAi: true, difficulty: aiDifficulties['ai-0'] as 'easy' | 'medium' | 'hard', score: 0, isHuman: false },
+      { id: 'ai-1', name: 'AI 上', isAi: true, difficulty: aiDifficulties['ai-1'] as 'easy' | 'medium' | 'hard', score: 0, isHuman: false },
+      { id: 'ai-2', name: 'AI 右', isAi: true, difficulty: aiDifficulties['ai-2'] as 'easy' | 'medium' | 'hard', score: 0, isHuman: false },
     ];
     const state = createInitialState(players);
     setHumanId('human');
@@ -711,14 +733,67 @@ function App() {
     }}>
       {/* Top bar */}
       <div className="flex items-center justify-between px-2 py-1 sm:px-4 sm:py-2 bg-black/0 shrink-0 fixed top-0 left-0 right-0 z-50">
-        <button
-          className="text-white/60 hover:text-white transition-colors"
-          style={topBarFontSize ? { fontSize: topBarFontSize } : {}}
-          onClick={() => setMode(null)}
-          aria-label="返回主菜单"
-        >
-          ← 菜单
-        </button>
+        <div className="relative" onClick={(e) => e.stopPropagation()}>
+          <button
+            className="text-white/60 hover:text-white transition-colors"
+            style={topBarFontSize ? { fontSize: topBarFontSize } : {}}
+            onClick={() => setShowDropdown(!showDropdown)}
+            aria-label="菜单选项"
+          >
+            ← 菜单
+          </button>
+          {showDropdown && (
+            <div
+              className="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-xl py-2 z-50 min-w-[180px]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* AI Difficulty Section */}
+              <div className="px-3 py-1.5 text-xs font-bold text-gray-400 uppercase tracking-wider">AI 难度</div>
+              {(['ai-0', 'ai-1', 'ai-2'] as const).map((aiId, idx) => {
+                const aiNames = ['AI 左', 'AI 上', 'AI 右'];
+                return (
+                  <div key={aiId} className="px-3 py-1">
+                    <div className="text-xs text-gray-500 mb-0.5">{aiNames[idx]}</div>
+                    <div className="flex gap-1">
+                      {(['easy', 'medium', 'hard'] as const).map((diff) => {
+                        const labels = { easy: '简单', medium: '中等', hard: '困难' };
+                        const isActive = aiDifficulties[aiId] === diff;
+                        return (
+                          <button
+                            key={diff}
+                            className={`flex-1 text-xs px-2 py-1 rounded-md transition-colors ${
+                              isActive
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setAiDifficulties(prev => ({ ...prev, [aiId]: diff }));
+                            }}
+                          >
+                            {labels[diff]}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="border-t my-1.5" />
+              {/* Home Button */}
+              <button
+                className="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setMode(null);
+                  setShowDropdown(false);
+                }}
+              >
+                返回主页
+              </button>
+            </div>
+          )}
+        </div>
         <div
           className="text-white/70 font-medium truncate px-1"
           style={topBarFontSize ? { fontSize: topBarFontSize } : {}}

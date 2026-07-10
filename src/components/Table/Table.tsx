@@ -270,17 +270,16 @@ const Table: React.FC<TableProps> = memo(({
 
       {/* ── Turn Status (above human badge) ──────────────────────── */}
       {turnStatus && (() => {
-        // Place turnStatus above the human badge, with enough clearance
-        const badgeBottom = tableBottom - badgeOff;
-        const statusTop = badgeBottom - 50; // 50px above badge center
+        const badgeTop = tableBottom - badgeOff;
+        console.log('[TABLE] badgeTop:', badgeTop, 'tableBottom:', tableBottom, 'badgeOff:', badgeOff, 'tcx:', tcx);
         return (
           <div
             className="pointer-events-none"
             style={{
               position: 'absolute',
               left: `${tcx}px`,
-              top: `${statusTop}px`,
-              transform: 'translate(-50%, 0)',
+              top: `${badgeTop}px`,
+              transform: 'translate(-50%, calc(-100% - 12px))',
               zIndex: 11,
             }}
             aria-live="polite"
