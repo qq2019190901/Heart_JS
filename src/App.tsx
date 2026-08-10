@@ -1,10 +1,12 @@
 import React, { useState, useCallback, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
+import { MotionConfig } from 'framer-motion';
 import { Menu } from './components/Menu/Menu';
 import { CardComponent } from './components/Card/Card';
 import { Table } from './components/Table/Table';
 import { LanLobby } from './components/Lan/LanLobby';
 import type { GameState, Card, Player, PassDirection } from './game/types';
-import { createInitialState, dealCardsForRound, applyCardPass, playCard } from './game/hearts-game';
+import { createInitialState, dealCardsForRound, buildDealState, applyCardPass, playCard } from './game/hearts-game';
+import { dealCardsRaw, sortHand } from './game/deck';
 import { getAiDecision } from './game/ai';
 import { getAiPlayDecision } from './game/ai-turn';
 import { heartsAreBroken, canPlayCard, getAllPlayableCards, isShotGunTheRose } from './game/rules';
@@ -12,6 +14,14 @@ import { useResponsive } from './hooks/useResponsive';
 import { lanPeer, LanPeerManager } from './network/lan-peer';
 
 type GameMode = 'single' | 'lan';
+
+// Card sort comparator (same order as sortHand in deck.ts)
+const SUIT_ORDER: string[] = ['spades', 'hearts', 'diamonds', 'clubs'];
+function cardSort(a: Card, b: Card): number {
+  const sd = SUIT_ORDER.indexOf(a.suit) - SUIT_ORDER.indexOf(b.suit);
+  if (sd !== 0) return sd;
+  return a.rank - b.rank;
+}
 
 function App() {
   const [mode, setMode] = useState<GameMode | null>(null);
@@ -32,6 +42,16 @@ function App() {
     }
   });
   const [showDropdown, setShowDropdown] = useState(false);
+
+  // Deal animation state
+  const [myDealt, setMyDealt] = useState(0); // human player's dealt count (triggers re-render)
+  const isDealingRef = useRef(false);
+  const dealIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // Shuffled deck for animation display
+  const [shuffledDeck, setShuffledDeck] = useState<Card[]>([]);
+  // Per-player deal data — single mutable ref, state only used to trigger re-render on human card
+  const dealPerPlayerRef = useRef<Record<string, Card[]>>({});
+
   const aiTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const trickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const gameStateRef = useRef<GameState | null>(null);
@@ -308,13 +328,6 @@ function App() {
     const state = createInitialState(players);
     setGameState(state);
     setHumanId(lanPlayerIdRef.current);
-
-    setTimeout(() => {
-      const dealt = dealCardsForRound(state, state.roundNumber);
-      setGameState(dealt);
-      if (dealt.phase === 'passing') setShowPassUI(true);
-      lanPeer.broadcast(dealt);
-    }, 500);
   }, [lanIsHost, lanConnected]);
 
   const handleLanLeave = useCallback(() => {
@@ -405,19 +418,7 @@ function App() {
     setHumanId('human');
     setGameState(state);
     setMode('single');
-    setTimeout(() => {
-      const dealt = dealCardsForRound(state, state.roundNumber);
-      if (dealt.passedDirections[dealt.players[0].id] === 'none') {
-        setGameState(applyCardPass(dealt));
-      } else {
-        setGameState(dealt);
-        if (dealt.phase === 'passing') {
-          setShowPassUI(true);
-          setSelectedPassCardIds(new Set());
-        }
-      }
-    }, 500);
-  }, [playerName]);
+  }, [playerName, aiDifficulties]);
 
   // ========== LAN: AI Turn Handling ==========
 
@@ -524,6 +525,99 @@ function App() {
     return () => { if (trickTimerRef.current) clearTimeout(trickTimerRef.current); };
   }, [gameState?.trickJustCompleted]);
 
+  // ========== Unified Deal Animation Effect ==========
+
+  useEffect(() => {
+    if (!gameState || gameState.phase !== 'dealing') return;
+    if (isDealingRef.current) return;
+
+    isDealingRef.current = true;
+    const state = gameStateRef.current;
+    if (!state) return;
+
+    const playerIds = state.players.map(p => p.id);
+    const humanPlayerId = state.players.find(p => p.isHuman)?.id || playerIds[0];
+    const humanIdx = playerIds.indexOf(humanPlayerId);
+    if (humanIdx < 0) return;
+
+    // Wait 400ms for shuffle feel, then deal cards one by one round-robin
+    const t1 = setTimeout(() => {
+      // Shuffle once
+      const shuffled = [...state.deck];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      setShuffledDeck(shuffled);
+
+      // Clear previous deal count
+      setMyDealt(0);
+      const initPerPlayer: Record<string, Card[]> = {};
+      for (const pid of playerIds) {
+        initPerPlayer[pid] = [];
+      }
+      dealPerPlayerRef.current = initPerPlayer;
+
+      // Deal one card every 70ms round-robin
+      let dealtIdx = 0;
+      dealIntervalRef.current = setInterval(() => {
+        if (dealtIdx >= shuffled.length) {
+          clearInterval(dealIntervalRef.current!);
+          dealIntervalRef.current = null;
+
+          // All 52 cards dealt — build final hands from the same shuffled deck, sort, proceed
+          const sortedHands = new Map<string, Card[]>();
+          for (const pid of playerIds) {
+            sortedHands.set(pid, sortHand(dealPerPlayerRef.current[pid]));
+          }
+
+          const finalState = buildDealState(state, sortedHands);
+
+          setTimeout(() => {
+            isDealingRef.current = false;
+            setGameState(finalState);
+            if (finalState.passedDirections[finalState.players[0].id] === 'none') {
+              setGameState(applyCardPass(finalState));
+            } else {
+              setShowPassUI(true);
+              setSelectedPassCardIds(new Set());
+            }
+            if (mode === 'lan') lanPeer.broadcast(finalState);
+          }, 500);
+          return;
+        }
+
+        const card = shuffled[dealtIdx];
+        const targetPlayer = playerIds[dealtIdx % playerIds.length];
+        // Insert card in sorted order using immutable copy (new array each time)
+        const arr = dealPerPlayerRef.current[targetPlayer];
+        const newArr = [...arr];
+        let insertAt = newArr.length;
+        for (let i = 0; i < newArr.length; i++) {
+          if (cardSort(card, newArr[i]) < 0) { insertAt = i; break; }
+        }
+        newArr.splice(insertAt, 0, card);
+        dealPerPlayerRef.current = { ...dealPerPlayerRef.current, [targetPlayer]: newArr };
+
+        // Only trigger re-render when human player receives a card
+        if (targetPlayer === humanPlayerId) {
+          setMyDealt(prev => prev + 1);
+        }
+
+        dealtIdx++;
+      }, 70);
+
+      return () => {
+        if (dealIntervalRef.current) {
+          clearInterval(dealIntervalRef.current);
+          dealIntervalRef.current = null;
+        }
+      };
+    }, 400);
+
+    return () => clearTimeout(t1);
+  }, [gameState?.phase, mode]);
+
   // ========== Common: Card Click Handler ==========
 
   const handleCardClick = useCallback((card: Card) => {
@@ -559,22 +653,7 @@ function App() {
     setGameOver(false);
     setShowPassUI(false);
     setSelectedPassCardIds(new Set());
-    setTimeout(() => {
-      const dealt = dealCardsForRound(newState, newState.roundNumber);
-      if (dealt.passedDirections[dealt.players[0].id] === 'none') {
-        const afterApply = applyCardPass(dealt);
-        setGameState(afterApply);
-        if (mode === 'lan') lanPeer.broadcast(afterApply);
-      } else {
-        setGameState(dealt);
-        if (dealt.phase === 'passing') {
-          setShowPassUI(true);
-          setSelectedPassCardIds(new Set());
-        }
-        if (mode === 'lan') lanPeer.broadcast(dealt);
-      }
-    }, 500);
-  }, [gameState, mode]);
+  }, [gameState]);
 
   const handlePassConfirm = () => {
     if (!gameState || gameState.phase !== 'passing') return;
@@ -624,18 +703,6 @@ function App() {
     setGameOver(false);
     setShowPassUI(false);
     setSelectedPassCardIds(new Set());
-    setTimeout(() => {
-      const dealt = dealCardsForRound(newState, newState.roundNumber);
-      if (dealt.passedDirections[dealt.players[0].id] === 'none') {
-        setGameState(applyCardPass(dealt));
-      } else {
-        setGameState(dealt);
-        if (dealt.phase === 'passing') {
-          setShowPassUI(true);
-          setSelectedPassCardIds(new Set());
-        }
-      }
-    }, 500);
   }, [gameState]);
 
   // ========== Menu Screen ==========
@@ -678,19 +745,20 @@ function App() {
     );
   }
 
-  if (gameState.phase === 'dealing') {
-    return (
-      <div className="min-h-screen min-h-dvh bg-emerald-900 flex items-center justify-center">
-        <div className="text-white text-xl animate-pulse">发牌中...</div>
-      </div>
-    );
-  }
-
   // ========== Playing Phase ==========
 
-  const humanHand = gameState.hands.get(humanId) || [];
+  // During deal animation, human hand is in deal order (not sorted), only show dealt cards
+  const fullHumanHand = gameState!.hands.get(humanId) || [];
+  let humanHand: Card[];
+  if (isDealingRef.current && shuffledDeck.length > 0) {
+    humanHand = [...(dealPerPlayerRef.current[humanId] || [])];
+  } else {
+    humanHand = fullHumanHand;
+  }
   const playableIds = new Set(
-    getAllPlayableCards(humanHand, gameState.currentTrick, heartsAreBroken(gameState.hands, gameState.highestHeart)).map(c => c.id)
+    humanHand.length > 0
+      ? getAllPlayableCards(humanHand, gameState!.currentTrick, heartsAreBroken(gameState!.hands, gameState!.highestHeart)).map(c => c.id)
+      : []
   );
 
   // Responsive hand layout — scales with viewport
@@ -707,16 +775,21 @@ function App() {
 
   const togglePassCard = (cardId: string) => {
     if (!isPassingPhase) return;
+    if (maxPass === 0) return;
     setSelectedPassCardIds(prev => {
       const newSet = new Set(prev);
       if (newSet.has(cardId)) {
+        // 已选中则取消，始终允许
         newSet.delete(cardId);
         return newSet;
       }
+      // 未满时才能新增
       if (newSet.size < maxPass) {
         newSet.add(cardId);
+        return newSet;
       }
-      return newSet;
+      // 已满，拒绝操作
+      return prev;
     });
   };
 
@@ -728,6 +801,7 @@ function App() {
   const humanScoringCards = isSettlement ? (settlementCards?.[humanId] || []).filter(c => c.suit === 'hearts' || (c.suit === 'spades' && c.rank === 12)) : [];
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="relative w-full h-full flex flex-col overflow-visible" style={{
       background: 'linear-gradient(180deg, var(--color-bg-gradient-start, #0d5e28) 0%, var(--color-bg-gradient-end, #094a20) 100%)',
     }}>
@@ -813,7 +887,8 @@ function App() {
           players={gameState.players.map(p => ({
             id: p.id, name: p.name, score: gameState.scores[p.id] ?? 0, isAi: !!p.isAi,
           }))}
-          aiHands={gameState.hands}
+          // During deal animation, pass dealPerPlayerRef for face-down card display
+          aiHands={isDealingRef.current ? new Map(Object.entries(dealPerPlayerRef.current)) : gameState!.hands}
           {...tableParams}
           turnStatus={
             isPassingPhase ? (
@@ -860,7 +935,7 @@ function App() {
         </div>
       </div>
 
-      {/* Bottom: hand only */}
+      {/* Bottom: human hand */}
       <div className="shrink-0 flex flex-col items-center w-full pb-1 sm:pb-3 pt-2 px-0.5 sm:px-4 relative z-10" style={{ marginTop: '4px' }}>
 
         {isPassingPhase ? (
@@ -884,20 +959,19 @@ function App() {
                 return (
                   <div
                     key={card.id}
-                    className="transition-all duration-200"
                     style={{
-                      transform: isSelected ? `translateY(-${cardMinPx * 0.3}px)` : undefined,
                       marginLeft: idx === 0 ? 0 : handSafeGap.safeGap,
                       flexShrink: 0,
                       minWidth: 0,
-                      cursor: 'pointer',
                     }}
+                    className="select-none cursor-pointer"
                     role="listitem"
                     onClick={() => togglePassCard(card.id)}
                   >
                     <CardComponent
                       card={card}
                       selected={isSelected}
+                      elevated={isSelected}
                       animate={false}
                       small
                       minPx={cardMinPx}
@@ -927,6 +1001,7 @@ function App() {
                 key={card.id}
                 className="transition-transform duration-150"
                 style={{
+                  animationDelay: `${idx * 0.06}s`,
                   marginLeft: idx === 0 ? 0 : handSafeGap.safeGap,
                   flexShrink: 0,
                   minWidth: 0,
@@ -965,6 +1040,7 @@ function App() {
                   key={card.id}
                   className="transition-transform duration-150"
                   style={{
+                    animationDelay: `${idx * 0.06}s`,
                     transform: !playable && isCurrentPlayer ? 'scale(0.92) brightness(0.7)' : undefined,
                     marginLeft: idx === 0 ? 0 : handSafeGap.safeGap,
                     flexShrink: 0,
@@ -1082,6 +1158,7 @@ function App() {
         );
       })()}
     </div>
+    </MotionConfig>
   );
 }
 

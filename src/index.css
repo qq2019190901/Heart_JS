@@ -77,6 +77,25 @@ html, body, #root {
   background: rgba(46, 204, 113, 0.3);
 }
 
+/* Card deal entrance animation */
+@keyframes dealCardIn {
+  0% {
+    opacity: 0;
+    transform: translateY(30px) scale(0.6);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.deal-card-in {
+  animation: dealCardIn 0.35s ease-out forwards;
+  opacity: 0;
+}
+
+/* Pass selection: no special CSS needed — Card handles its own lift */
+
 /* Trick card entrance animation */
 @keyframes trickCardIn {
   0% {

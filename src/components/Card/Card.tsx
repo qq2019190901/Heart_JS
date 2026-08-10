@@ -17,6 +17,8 @@ interface CardComponentProps {
   /** Keyboard handler */
   onKeyDown?: (e: React.KeyboardEvent) => void;
   tabIndex?: number;
+  /** Lift the card up (for pass selection) — disables hover lift to avoid stacking */
+  elevated?: boolean;
 }
 
 const SUIT_ICONS: Record<string, string> = {
@@ -53,6 +55,7 @@ const CardComponent: React.FC<CardComponentProps> = memo(({
   ariaLabel,
   onKeyDown,
   tabIndex = 0,
+  elevated = false,
 }) => {
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
@@ -78,15 +81,19 @@ const CardComponent: React.FC<CardComponentProps> = memo(({
   const pipSize = getPipSize(card.rank, small, minPx);
 
   const classes = [
-    'rounded-lg cursor-pointer select-none relative flex-shrink-0 gpu-accelerated',
-    selected ? 'ring-2 ring-green-400 ring-offset-2 ring-offset-emerald-800' : '',
+    'rounded-lg cursor-pointer select-none relative flex-shrink-0',
     disabled ? 'cursor-not-allowed' : '',
     focused ? 'ring-2 ring-blue-400 ring-offset-1' : '',
   ].filter(Boolean).join(' ');
 
+  // Selection lift: +10px (selected cards stay elevated, hover lift is disabled)
+  const isElevated = selected || elevated;
+  const cardTransform = isElevated
+    ? 'translateY(-10px)'
+    : undefined;
+
   let boxShadow = 'var(--shadow-card, 0 2px 8px rgba(0,0,0,0.2))';
-  if (selected) boxShadow = 'var(--shadow-card-selected, 0 8px 25px rgba(46,204,113,0.4))';
-  else if (hovered && !disabled) boxShadow = 'var(--shadow-card-hover, 0 6px 20px rgba(0,0,0,0.3))';
+  if (hovered && !disabled && !faceDown) boxShadow = 'var(--shadow-card-hover, 0 6px 20px rgba(0,0,0,0.3))';
 
   // Accessible label: "Ace of Spades" etc.
   const label = ariaLabel || `${getRankDisplay(card.rank)} of ${card.suit}`;
@@ -107,7 +114,7 @@ const CardComponent: React.FC<CardComponentProps> = memo(({
         height: cardH,
         backgroundColor: faceDown ? 'var(--color-card-face-down-top, #1a5276)' : 'white',
         boxShadow,
-        transform: (hovered && !disabled && !faceDown && !selected) ? 'translateY(-8px) scale(1.05)' : undefined,
+        transform: cardTransform,
         transition: 'transform 0.15s ease-out, box-shadow 0.15s ease-out',
         willChange: hovered ? 'transform' : undefined,
         WebkitBackfaceVisibility: 'hidden',

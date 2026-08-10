@@ -5,7 +5,7 @@ import type {
   Player,
   PassDirection,
 } from './types';
-import { createDeck, dealCards } from './deck';
+import { createDeck, dealCards, sortHand } from './deck';
 import { isShotGunTheRose } from './rules';
 
 export function createInitialState(players: Player[], roundNumber: number = 1): GameState {
@@ -33,6 +33,17 @@ export function dealCardsForRound(state: GameState, roundNumber: number): GameSt
   const newState = { ...state, roundNumber } as GameState;
   const playerIds = newState.players.map(p => p.id);
   const hands = dealCards(newState.deck, playerIds);
+  return buildPassPhase(newState, hands, playerIds);
+}
+
+/** Build passing phase state from already-dealt hands (used after animated deal). */
+export function buildDealState(state: GameState, hands: Map<string, Card[]>): GameState {
+  const playerIds = state.players.map(p => p.id);
+  return buildPassPhase({ ...state, hands }, hands, playerIds);
+}
+
+function buildPassPhase(state: GameState, hands: Map<string, Card[]>, playerIds: string[]): GameState {
+  const newState = { ...state } as GameState;
   newState.hands = hands;
   newState.deck = [];
   newState.phase = 'passing';
@@ -45,7 +56,7 @@ export function dealCardsForRound(state: GameState, roundNumber: number): GameSt
   // Determine pass direction and cards to pass
   // Standard Hearts passing cycle: L, Across, R, None, repeat
   const passCycle = ['left', 'across', 'right', 'none'] as const;
-  const passDir = passCycle[(roundNumber - 1) % 4] as PassDirection;
+  const passDir = passCycle[(newState.roundNumber - 1) % 4] as PassDirection;
   newState.passedDirections = {};
   newState.passedCards = {};
 
@@ -99,8 +110,7 @@ export function applyCardPass(state: GameState): GameState {
       receiveFromIdx = i; // shouldn't happen since passDir==='none' returns early
     }
     const received = newState.passedCards[newState.players[receiveFromIdx].id] || [];
-    updatedHand = [...updatedHand, ...received];
-    updatedHand.sort(sortHand);
+    updatedHand = sortHand([...updatedHand, ...received]);
     hands.set(pid, updatedHand);
   }
 
@@ -116,13 +126,6 @@ function startPlaying(state: GameState): GameState {
   const twoOfClubs = findTwoOfClubs(newState.hands);
   newState.currentPlayerId = twoOfClubs ?? newState.players[0].id;
   return newState;
-}
-
-function sortHand(a: Card, b: Card): number {
-  const suitOrder = ['spades', 'hearts', 'diamonds', 'clubs'];
-  const suitDiff = suitOrder.indexOf(a.suit) - suitOrder.indexOf(b.suit);
-  if (suitDiff !== 0) return suitDiff;
-  return a.rank - b.rank;
 }
 
 function passCards(hand: Card[], direction: PassDirection): Card[] {

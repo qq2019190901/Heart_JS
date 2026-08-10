@@ -1,4 +1,22 @@
 /* Game-specific styles */
+
+/* ── Deal card animation: cards fly in from screen center ── */
+@keyframes dealCardIn {
+  from {
+    opacity: 0;
+    transform: scale(0.3) rotate(-30deg);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.deal-card-in {
+  animation: dealCardIn 0.5s ease-out forwards;
+}
+
+/* Legacy deal card animation (unused but kept for reference) */
 @keyframes dealCard {
   from {
     transform: translateY(-120px) rotate(-20deg);

@@ -36,7 +36,8 @@ export function shuffleDeck(deck: Card[]): Card[] {
   return shuffled;
 }
 
-export function dealCards(deck: Card[], playerIds: string[]): Map<string, Card[]> {
+/** Deal cards round-robin WITHOUT sorting — preserves original shuffled order. */
+export function dealCardsRaw(deck: Card[], playerIds: string[]): Map<string, Card[]> {
   const hands = new Map<string, Card[]>();
   const shuffled = shuffleDeck(deck);
   for (const id of playerIds) {
@@ -46,13 +47,23 @@ export function dealCards(deck: Card[], playerIds: string[]): Map<string, Card[]
     const playerId = playerIds[i % playerIds.length];
     hands.get(playerId)!.push(shuffled[i]);
   }
-  // Sort each hand by suit then rank
+  return hands;
+}
+
+/** Sort a single hand by suit order then rank ascending. */
+export function sortHand(cards: Card[], suitOrder: Suit[] = ['spades', 'hearts', 'diamonds', 'clubs']): Card[] {
+  return [...cards].sort((a, b) => {
+    const suitDiff = suitOrder.indexOf(a.suit) - suitOrder.indexOf(b.suit);
+    if (suitDiff !== 0) return suitDiff;
+    return a.rank - b.rank;
+  });
+}
+
+/** Deal cards and sort each hand by suit then rank (legacy API). */
+export function dealCards(deck: Card[], playerIds: string[]): Map<string, Card[]> {
+  const hands = dealCardsRaw(deck, playerIds);
   for (const [id, cards] of hands) {
-    cards.sort((a, b) => {
-      const suitOrder = SUITS.indexOf(a.suit) - SUITS.indexOf(b.suit);
-      if (suitOrder !== 0) return suitOrder;
-      return a.rank - b.rank;
-    });
+    hands.set(id, sortHand(cards));
   }
   return hands;
 }

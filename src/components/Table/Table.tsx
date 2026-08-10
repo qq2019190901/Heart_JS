@@ -102,69 +102,74 @@ const Table: React.FC<TableProps> = memo(({
   return (
     <div ref={containerRef} className="relative w-full h-full overflow-visible" role="application" aria-label="扑克牌桌">
       {/* ── AI Hands ─────────────────────────────────────────────── */}
-      {players.map((player, idx) => {
-        if (!player.isAi) return null;
-        const settlement = settlementCards?.[player.id]?.filter(c => c.suit === 'hearts' || (c.suit === 'spades' && c.rank === 12)) || [];
-        const aiCards = settlement.length > 0 ? settlement : (aiHands instanceof Map ? aiHands.get(player.id) : undefined) || [];
-        const displayCount = aiCards.length > 0 ? aiCards.length : 0;
-        const side = sideForIdx(idx);
+      {(() => {
+        let globalCardIndex = 0;
+        return players.map((player, idx) => {
+          if (!player.isAi) return null;
+          const settlement = settlementCards?.[player.id]?.filter(c => c.suit === 'hearts' || (c.suit === 'spades' && c.rank === 12)) || [];
+          const aiCards = settlement.length > 0 ? settlement : (aiHands instanceof Map ? aiHands.get(player.id) : undefined) || [];
+          const displayCount = aiCards.length > 0 ? aiCards.length : 0;
+          const side = sideForIdx(idx);
 
-        // Fan direction
-        const isHorizontal = side === 'top' || side === 'bottom';
-        const fanSpacing = isHorizontal ? fanStepX : fanStepY;
-        const fanTotalSize = (displayCount - 1) * fanSpacing + (isHorizontal ? cardW : cardH);
+          // Fan direction
+          const isHorizontal = side === 'top' || side === 'bottom';
+          const fanSpacing = isHorizontal ? fanStepX : fanStepY;
+          const fanTotalSize = (displayCount - 1) * fanSpacing + (isHorizontal ? cardW : cardH);
 
-        // Position AI hand based on its side
-        let handStyle: React.CSSProperties;
-        if (side === 'left') {
-          handStyle = { left: `${leftHandLeft}px`, top: `${leftHandTop}px` };
-        } else if (side === 'right') {
-          handStyle = { left: `${rightHandLeft}px`, top: `${rightHandTop}px` };
-        } else if (side === 'top') {
-          handStyle = { left: `${topHandLeft}px`, top: `${topHandTop}px` };
-        } else {
-          // bottom — shouldn't render (human hand is at bottom)
-          handStyle = {};
-        }
+          // Position AI hand based on its side
+          let handStyle: React.CSSProperties;
+          if (side === 'left') {
+            handStyle = { left: `${leftHandLeft}px`, top: `${leftHandTop}px` };
+          } else if (side === 'right') {
+            handStyle = { left: `${rightHandLeft}px`, top: `${rightHandTop}px` };
+          } else if (side === 'top') {
+            handStyle = { left: `${topHandLeft}px`, top: `${topHandTop}px` };
+          } else {
+            // bottom — shouldn't render (human hand is at bottom)
+            handStyle = {};
+          }
 
-        return (
-          <div
-            key={`ai-cards-${player.id}`}
-            style={{
-              position: 'absolute',
-              ...handStyle,
-              zIndex: 5,
-            }}
-            aria-label={`${player.name} 的手牌`}
-          >
-            {Array.from({ length: displayCount }).map((_, ci) => {
-              const cardData = aiCards[ci];
-              const card = cardData || { suit: 'spades' as const, rank: 2 as const, id: `${player.id}-placeholder-${ci}` };
-              return (
-                <div
-                  key={ci}
-                  style={{
-                    position: 'absolute',
-                    left: isHorizontal ? `${ci * fanSpacing}px` : '0px',
-                    top: isHorizontal ? '0px' : `${ci * fanSpacing}px`,
-                    width: `${aiCardMinPx}px`,
-                    height: `${Math.round(aiCardMinPx * 1.5)}px`,
-                  }}
-                >
-                  <CardComponent
-                    card={card}
-                    faceDown={settlement.length === 0}
-                    small
-                    minPx={aiCardMinPx}
-                    animate={false}
-                    ariaLabel={`${player.name} 的一张背面牌`}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        );
-      })}
+          return (
+            <div
+              key={`ai-cards-${player.id}`}
+              style={{
+                position: 'absolute',
+                ...handStyle,
+                zIndex: 5,
+              }}
+              aria-label={`${player.name} 的手牌`}
+            >
+              {Array.from({ length: displayCount }).map((_, ci) => {
+                const cardData = aiCards[ci];
+                const card = cardData || { suit: 'spades' as const, rank: 2 as const, id: `${player.id}-placeholder-${ci}` };
+                return (
+                  <div
+                    key={card.id}
+                    className="deal-card-in"
+                    style={{
+                      position: 'absolute',
+                      left: isHorizontal ? `${ci * fanSpacing}px` : '0px',
+                      top: isHorizontal ? '0px' : `${ci * fanSpacing}px`,
+                      width: `${aiCardMinPx}px`,
+                      height: `${Math.round(aiCardMinPx * 1.5)}px`,
+                      animationDelay: `${globalCardIndex++ * 0.05}s`,
+                    }}
+                  >
+                    <CardComponent
+                      card={card}
+                      faceDown={settlement.length === 0}
+                      small
+                      minPx={aiCardMinPx}
+                      animate={false}
+                      ariaLabel={`${player.name} 的一张背面牌`}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          );
+        });
+      })()}
 
       {/* ── Badges ───────────────────────────────────────────────── */}
       {players.map((player, idx) => {
