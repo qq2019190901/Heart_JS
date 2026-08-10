@@ -886,8 +886,6 @@ function App() {
             id: p.id, name: p.name, score: gameState.scores[p.id] ?? 0, isAi: !!p.isAi,
           }))}
           // During deal animation, pass dealPerPlayerRef for face-down card display
-          // Use a unique key to force re-render
-          key={isDealingRef.current ? 'dealing' : 'playing'}
           aiHands={isDealingRef.current ? new Map(Object.entries(dealPerPlayerRef.current)) : gameState!.hands}
           {...tableParams}
           turnStatus={
