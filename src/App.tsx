@@ -562,7 +562,9 @@ function App() {
 
       // Deal one card every 70ms round-robin
       let dealtIdx = 0;
+      console.log('[DEAL] Starting deal animation, players:', playerIds, 'human:', humanPlayerId);
       dealIntervalRef.current = setInterval(() => {
+        console.log('[DEAL] dealtIdx:', dealtIdx, 'total:', shuffled.length, 'target:', playerIds[dealtIdx % playerIds.length]);
         if (dealtIdx >= shuffled.length) {
           clearInterval(dealIntervalRef.current!);
           dealIntervalRef.current = null;
@@ -571,12 +573,16 @@ function App() {
           const sortedHands = new Map<string, Card[]>();
           for (const pid of playerIds) {
             sortedHands.set(pid, sortHand(dealPerPlayerRef.current[pid]));
+            console.log('[DEAL] Final hand for', pid, ':', sortedHands.get(pid).length, 'cards');
           }
 
           const finalState = buildDealState(state, sortedHands);
 
           setTimeout(() => {
             isDealingRef.current = false;
+            console.log('[DEAL] Setting game state, phase:', finalState.phase, 'hands:', Object.fromEntries(
+              Array.from(finalState.hands.entries()).map(([k, v]) => [k, v.length])
+            ));
             setGameState(finalState);
             if (finalState.passedDirections[finalState.players[0].id] === 'none') {
               setGameState(applyCardPass(finalState));
@@ -591,6 +597,7 @@ function App() {
 
         const card = shuffled[dealtIdx];
         const targetPlayer = playerIds[dealtIdx % playerIds.length];
+        console.log('[DEAL] Card:', card.suit, card.rank, '->', targetPlayer, 'humanId:', humanPlayerId, 'match:', targetPlayer === humanPlayerId);
         // Insert card in sorted order using immutable copy (new array each time)
         const arr = dealPerPlayerRef.current[targetPlayer];
         const newArr = [...arr];
