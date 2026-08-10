@@ -36,7 +36,12 @@ const Table: React.FC<TableProps> = memo(({
   passConfirmAction,
   settlementCards,
 }) => {
-  console.log('[TABLE] Render, aiHands size:', aiHands?.size, 'trick:', trick?.cards?.length);
+  // Debug: track re-renders
+  const renderCountRef = useRef(0);
+  renderCountRef.current++;
+  if (renderCountRef.current <= 10 || renderCountRef.current % 20 === 0) {
+    console.log('[TABLE] Render #' + renderCountRef.current, 'aiHands size:', aiHands?.size, 'trick cards:', trick?.cards?.length);
+  }
   const containerRef = useRef<HTMLDivElement>(null);
   trick, currentPlayerId, humanPlayerId, players, aiHands = new Map(),
   aiCardMinPx, cardW, cardH, tablePad, aiHandOffset,

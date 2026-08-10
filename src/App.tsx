@@ -565,6 +565,12 @@ function App() {
       console.log('[DEAL] Starting deal animation, players:', playerIds, 'human:', humanPlayerId);
       dealIntervalRef.current = setInterval(() => {
         console.log('[DEAL] dealtIdx:', dealtIdx, 'total:', shuffled.length, 'target:', playerIds[dealtIdx % playerIds.length]);
+        // Log current hand sizes before each deal
+        const sizes = {};
+        for (const pid of playerIds) {
+          sizes[pid] = dealPerPlayerRef.current[pid]?.length || 0;
+        }
+        console.log('[DEAL] Current hand sizes:', sizes);
         if (dealtIdx >= shuffled.length) {
           clearInterval(dealIntervalRef.current!);
           dealIntervalRef.current = null;
