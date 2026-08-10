@@ -43,15 +43,6 @@ const Table: React.FC<TableProps> = memo(({
     console.log('[TABLE] Render #' + renderCountRef.current, 'aiHands size:', aiHands?.size, 'trick cards:', trick?.cards?.length);
   }
   const containerRef = useRef<HTMLDivElement>(null);
-  trick, currentPlayerId, humanPlayerId, players, aiHands = new Map(),
-  aiCardMinPx, cardW, cardH, tablePad, aiHandOffset,
-  trickOverlapBase, trickOverlapStep, badgeOff, badgeFontSizePx, scoreFontSizePx,
-  fanStepX, fanStepY, trickCardMinPx,
-  turnStatus,
-  passConfirmAction,
-  settlementCards,
-}) => {
-  const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState(() => ({
     w: Math.max(window.innerWidth, 320),
     h: Math.max(window.innerHeight, 480),
