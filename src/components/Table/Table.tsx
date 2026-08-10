@@ -144,7 +144,7 @@ const Table: React.FC<TableProps> = memo(({
                 const card = cardData || { suit: 'spades' as const, rank: 2 as const, id: `${player.id}-placeholder-${ci}` };
                 return (
                   <div
-                    key={card.id}
+                    key={`${player.id}-${ci}`}
                     className="deal-card-in"
                     style={{
                       position: 'absolute',
