@@ -36,13 +36,6 @@ const Table: React.FC<TableProps> = memo(({
   passConfirmAction,
   settlementCards,
 }) => {
-  // Debug: track re-renders and aiHands contents
-  const renderCountRef = useRef(0);
-  renderCountRef.current++;
-  if (renderCountRef.current <= 10 || renderCountRef.current % 20 === 0) {
-    const handSizes = aiHands ? Object.fromEntries(Array.from(aiHands.entries()).map(([k, v]) => [k, v.length])) : {};
-    console.log('[TABLE] Render #' + renderCountRef.current, 'aiHands size:', aiHands?.size, 'hand sizes:', handSizes, 'trick cards:', trick?.cards?.length);
-  }
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState(() => ({
     w: Math.max(window.innerWidth, 320),
