@@ -145,14 +145,13 @@ const Table: React.FC<TableProps> = memo(({
                 return (
                   <div
                     key={`${player.id}-${ci}`}
-                    className="deal-card-in"
+                    className=""
                     style={{
                       position: 'absolute',
                       left: isHorizontal ? `${ci * fanSpacing}px` : '0px',
                       top: isHorizontal ? '0px' : `${ci * fanSpacing}px`,
                       width: `${aiCardMinPx}px`,
                       height: `${Math.round(aiCardMinPx * 1.5)}px`,
-                      animationDelay: `${globalCardIndex++ * 0.05}s`,
                     }}
                   >
                     <CardComponent
