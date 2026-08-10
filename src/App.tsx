@@ -616,8 +616,10 @@ function App() {
 
         // Trigger re-render when any player receives a card
         if (targetPlayer === humanPlayerId) {
+          console.log('[DEAL] Setting myDealt for human');
           setMyDealt(prev => prev + 1);
         } else {
+          console.log('[DEAL] Setting aiDealt for', targetPlayer);
           setAiDealt(prev => prev + 1);
         }
 
@@ -905,6 +907,8 @@ function App() {
             id: p.id, name: p.name, score: gameState.scores[p.id] ?? 0, isAi: !!p.isAi,
           }))}
           // During deal animation, pass dealPerPlayerRef for face-down card display
+          // Use a unique key to force re-render
+          key={isDealingRef.current ? 'dealing' : 'playing'}
           aiHands={isDealingRef.current ? new Map(Object.entries(dealPerPlayerRef.current)) : gameState!.hands}
           {...tableParams}
           turnStatus={
