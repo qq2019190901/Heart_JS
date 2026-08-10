@@ -44,8 +44,7 @@ function App() {
   const [showDropdown, setShowDropdown] = useState(false);
 
   // Deal animation state
-  const [myDealt, setMyDealt] = useState(0); // human player's dealt count (triggers re-render)
-  const [aiDealt, setAiDealt] = useState(0); // AI players' dealt count (triggers re-render for AI hand display)
+  const [dealCount, setDealCount] = useState(0); // unified counter to trigger re-render on every card deal
   const isDealingRef = useRef(false);
   const dealIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Shuffled deck for animation display
@@ -552,8 +551,7 @@ function App() {
       setShuffledDeck(shuffled);
 
       // Clear previous deal count
-      setMyDealt(0);
-      setAiDealt(0);
+      setDealCount(0);
       const initPerPlayer: Record<string, Card[]> = {};
       for (const pid of playerIds) {
         initPerPlayer[pid] = [];
@@ -614,14 +612,9 @@ function App() {
         newArr.splice(insertAt, 0, card);
         dealPerPlayerRef.current = { ...dealPerPlayerRef.current, [targetPlayer]: newArr };
 
-        // Trigger re-render when any player receives a card
-        if (targetPlayer === humanPlayerId) {
-          console.log('[DEAL] Setting myDealt for human');
-          setMyDealt(prev => prev + 1);
-        } else {
-          console.log('[DEAL] Setting aiDealt for', targetPlayer);
-          setAiDealt(prev => prev + 1);
-        }
+        // Trigger re-render on every card deal
+        console.log('[DEAL] Incrementing dealCount for', targetPlayer);
+        setDealCount(prev => prev + 1);
 
         dealtIdx++;
       }, 70);
