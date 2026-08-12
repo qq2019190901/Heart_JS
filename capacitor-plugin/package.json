@@ -1,0 +1,21 @@
+{
+  "name": "@heartjs/capacitor-peer-server",
+  "version": "1.0.0",
+  "description": "Capacitor plugin for PeerJS signaling server status",
+  "main": "dist/esm/index.js",
+  "module": "dist/esm/index.js",
+  "types": "dist/esm/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch"
+  },
+  "dependencies": {
+    "@capacitor/core": "^8.0.0"
+  },
+  "peerDependencies": {
+    "@capacitor/core": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43"
+  }
+}

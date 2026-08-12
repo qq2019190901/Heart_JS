@@ -127,7 +127,7 @@ function App() {
         if (!state) return;
         const hand = state.hands.get(from) || [];
         const cardsToPass = hand.filter(c => payload.cardIds.includes(c.id));
-        lanPeer._lanClientPasses = { ...lanPeer._lanClientPasses, [from]: cardsToPass };
+        lanPeer.clientPasses = { ...lanPeer.clientPasses, [from]: cardsToPass };
         lanPassConfirmedRef.current.add(from);
         checkLanPassComplete();
         return;
@@ -205,12 +205,12 @@ function App() {
     if (!allConfirmed) return;
 
     const allPassedCards = { ...state.passedCards };
-    Object.assign(allPassedCards, lanPeer._lanClientPasses);
+    Object.assign(allPassedCards, lanPeer.clientPasses);
     if (lanHostPassRef.current) Object.assign(allPassedCards, lanHostPassRef.current);
 
     const updatedState = { ...state, passedCards: allPassedCards } as GameState;
     lanPassConfirmedRef.current.clear();
-    lanPeer._lanClientPasses = {};
+    lanPeer.clientPasses = {};
     lanHostPassRef.current = {};
 
     const finalState = applyCardPass(updatedState);
@@ -427,16 +427,13 @@ function App() {
     if (showPassUI) setShowPassUI(false);
     if (gameState.trickJustCompleted) return;
 
-    const decision = getAiPlayDecision(gameState);
-    if (!decision) return;
-
     setWaitingForAi(true);
 
     aiTimeoutRef.current = setTimeout(() => {
       const latestState = gameStateRef.current;
       if (!latestState || latestState.phase !== 'playing') { setWaitingForAi(false); return; }
       const latestDecision = getAiPlayDecision(latestState);
-      if (!latestDecision || latestDecision.playerId !== decision.playerId) { setWaitingForAi(false); return; }
+      if (!latestDecision) { setWaitingForAi(false); return; }
 
       const newState = playCard(latestState, latestDecision.playerId, latestDecision.cardId);
       setGameState(newState);
@@ -444,7 +441,7 @@ function App() {
       if (newState.phase === 'roundOver') setRoundOver(true);
       else if (newState.phase === 'gameOver') setGameOver(true);
       setWaitingForAi(false);
-    }, decision.delay);
+    }, 500);
 
     return () => { if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current); };
   }, [gameState?.currentPlayerId, gameState?.phase, gameState?.trickJustCompleted, mode]);
@@ -619,20 +616,21 @@ function App() {
   // ========== Common: Card Click Handler ==========
 
   const handleCardClick = useCallback((card: Card) => {
-    if (!gameState || gameState.phase !== 'playing') return;
-    if (gameState.currentPlayerId !== humanId) return;
+    const state = gameStateRef.current;
+    if (!state || state.phase !== 'playing') return;
+    if (state.currentPlayerId !== humanId) return;
     if (waitingForAi) return;
-    if (gameState.trickJustCompleted) return;
+    if (state.trickJustCompleted) return;
 
-    const hand = gameState.hands.get(humanId) || [];
-    const hb = heartsAreBroken(gameState.hands, gameState.highestHeart);
-    if (!canPlayCard(card, hand, gameState.currentTrick, hb)) return;
+    const hand = state.hands.get(humanId) || [];
+    const hb = heartsAreBroken(state.hands, state.highestHeart);
+    if (!canPlayCard(card, hand, state.currentTrick, hb)) return;
 
-    const newState = playCard(gameState, humanId, card.id);
+    const newState = playCard(state, humanId, card.id);
     setGameState(newState);
     if (newState.phase === 'roundOver') setRoundOver(true);
     else if (newState.phase === 'gameOver') setGameOver(true);
-  }, [gameState, humanId, waitingForAi]);
+  }, [humanId, waitingForAi]);
 
   // ========== Common: Continue / Restart ==========
 
@@ -651,7 +649,11 @@ function App() {
     setGameOver(false);
     setShowPassUI(false);
     setSelectedPassCardIds(new Set());
-  }, [gameState]);
+    // Broadcast to LAN clients if host
+    if (mode === 'lan' && lanIsHostRef.current) {
+      lanPeer.broadcast(newState);
+    }
+  }, [gameState, mode]);
 
   const handlePassConfirm = () => {
     if (!gameState || gameState.phase !== 'passing') return;
@@ -669,14 +671,16 @@ function App() {
         return;
       } else {
         console.log('[LAN-CLIENT] Sending pass-card to host:', Array.from(selectedPassCardIds));
-        lanPeer.sendToHost('pass-card', { cardIds: Array.from(selectedPassCardIds), type: 'pass-card' });
-        setLanClientSentPass(true);
-        // Don't close UI yet — wait for host broadcast with new phase
-        setSelectedPassCardIds(new Set());
+        const sent = lanPeer.sendToHost('pass-card', { cardIds: Array.from(selectedPassCardIds), type: 'pass-card' });
+        if (sent) {
+          setLanClientSentPass(true);
+          // Don't close UI yet — wait for host broadcast with new phase
+          setSelectedPassCardIds(new Set());
+        } else {
+          console.warn('[LAN-CLIENT] Failed to send pass-card to host');
+        }
         return;
       }
-      setShowPassUI(false);
-      return;
     }
 
     // single: apply locally

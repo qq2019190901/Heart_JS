@@ -1,7 +1,7 @@
 import Peer, { type DataConnection } from 'peerjs';
 import type { Card } from '../game/types';
 
-export type LanRole = 'host' | 'client';
+export type LanRole = 'host' | 'client' | null;
 
 export type LanEvent =
   | 'connection-ready'
@@ -9,6 +9,10 @@ export type LanEvent =
   | 'peer-disconnected'
   | 'data-received'
   | 'connection-error';
+
+export type ServerMode = 'embedded' | 'custom' | 'auto';
+
+const SERVER_STORAGE_KEY = 'heart-lan-server';
 
 export interface LanServerConfig {
   host: string;
@@ -25,7 +29,12 @@ export class LanPeerManager {
   private listeners = new Map<string, Set<(data: any) => void>>();
   private connected = false;
   private serverConfig: LanServerConfig = { host: 'localhost', port: 9000 };
-  _lanClientPasses: Record<string, Card[]> = {};
+  private _serverMode: ServerMode = 'embedded';
+  private _androidLocalIp: string = '';
+  private _lanClientPasses: Record<string, Card[]> = {};
+
+  get clientPasses(): Record<string, Card[]> { return this._lanClientPasses; }
+  set clientPasses(v: Record<string, Card[]>) { this._lanClientPasses = v; }
 
   get isConnected() { return this.connected; }
   get role() { return this._role; }
@@ -33,6 +42,8 @@ export class LanPeerManager {
   get roomId() { return this._roomId; }
   get hostConnection() { return this.hostConn; }
   get guestConnections() { return new Map(this.guestConns); }
+  get serverMode() { return this._serverMode; }
+  get androidLocalIp() { return this._androidLocalIp; }
 
   static createPeerId(): string {
     return `p-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
@@ -53,6 +64,46 @@ export class LanPeerManager {
    */
   setServerConfig(config: LanServerConfig): void {
     this.serverConfig = config;
+    LanPeerManager.saveServer(config.host, config.port);
+  }
+
+  setServerMode(mode: ServerMode): void {
+    this._serverMode = mode;
+  }
+
+  setAndroidLocalIp(ip: string): void {
+    this._androidLocalIp = ip;
+  }
+
+  /**
+   * Read server config from URL hash (#server=host:port)
+   */
+  static getServerFromUrl(): { host: string; port: number } | null {
+    const match = window.location.hash.match(/#server=([^&]+)/);
+    if (match) {
+      const [host, port] = match[1].split(':');
+      return { host, port: parseInt(port) || 9000 };
+    }
+    return null;
+  }
+
+  /**
+   * Read saved server config from localStorage
+   */
+  static getSavedServer(): { host: string; port: number } | null {
+    try {
+      const s = localStorage.getItem(SERVER_STORAGE_KEY);
+      return s ? JSON.parse(s) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Save server config to localStorage
+   */
+  static saveServer(host: string, port: number): void {
+    localStorage.setItem(SERVER_STORAGE_KEY, JSON.stringify({ host, port }));
   }
 
   /**
@@ -128,6 +179,23 @@ export class LanPeerManager {
     return new Promise((resolve) => {
       this._role = 'client';
       this._roomId = hostId;
+
+      // Clean up old peer before creating a new one
+      if (this.peer) {
+        try { this.peer.destroy(); } catch {}
+        this.peer = null;
+      }
+
+      // Auto-detect server: URL hash > localStorage (skip localhost) > default
+      const urlServer = LanPeerManager.getServerFromUrl();
+      const savedServer = LanPeerManager.getSavedServer();
+      if (urlServer) {
+        this.serverConfig = urlServer;
+      } else if (savedServer && savedServer.host !== '127.0.0.1' && savedServer.host !== 'localhost') {
+        this.serverConfig = savedServer;
+      } else if (this._serverMode === 'custom' && !this.serverConfig.host) {
+        // custom mode but no config set, use default
+      }
       this.peer = new Peer(undefined as any, {
         debug: 0,
         config: {
@@ -316,7 +384,7 @@ export class LanPeerManager {
       this.peer = null;
     }
     this.connected = false;
-    this._role = 'client';
+    this._role = null;
     this._myId = '';
     this._roomId = '';
     this._lanClientPasses = {};
@@ -335,6 +403,13 @@ export class LanPeerManager {
 
   private emit(event: string, data: any): void {
     this.listeners.get(event)?.forEach(cb => cb(data));
+  }
+
+  /**
+   * Get the singleton instance (for use in components that don't have access to the export)
+   */
+  static getInstance(): LanPeerManager {
+    return lanPeer;
   }
 }
 

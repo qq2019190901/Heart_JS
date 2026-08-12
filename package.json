@@ -2,37 +2,42 @@
   "name": "heart-js",
   "private": true,
   "version": "0.0.0",
-  "type": "module",
+  "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc && tsc -p tsconfig.electron.json && vite build",
+    "build:electron": "npm run build && npm run prep-staging && electron-builder --dir",
+    "dist:electron": "npm run build && npm run prep-staging && electron-builder",
+    "prep-staging": "rm -rf _staging && mkdir _staging && cp dist-electron/main.js _staging/ && cp -r dist _staging/ && cp server.cjs _staging/ && cp package.json _staging/",
     "preview": "vite preview",
     "test": "vitest run",
     "lan-server": "node server.cjs"
   },
-  "dependencies": {
-    "@tailwindcss/vite": "^4.3.1",
-    "framer-motion": "^12.40.0",
-    "react": "^19.2.6",
-    "react-dom": "^19.2.6"
-  },
-  "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@types/node": "^24.12.3",
-    "@types/react": "^19.2.14",
-    "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
-    "eslint": "^10.3.0",
-    "eslint-plugin-react-hooks": "^7.1.1",
-    "eslint-plugin-react-refresh": "^0.5.2",
-    "globals": "^17.6.0",
-    "jsdom": "^29.1.1",
-    "peer": "^1.0.2",
-    "peerjs": "^1.5.5",
-    "tailwindcss": "^4.3.1",
-    "typescript": "~6.0.2",
-    "typescript-eslint": "^8.59.2",
-    "vite": "^8.0.12",
-    "vitest": "^4.1.9"
+  "build": {
+    "appId": "com.heartjs.game",
+    "productName": "Heart JS",
+    "directories": {
+      "output": "_build"
+    },
+    "files": [
+      "dist-electron/**/*",
+      "dist/**/*",
+      "server.cjs"
+    ],
+    "win": {
+      "target": "dir",
+      "icon": "public/favicon.svg"
+    },
+    "asar": true,
+    "asarUnpack": [
+      "dist/**/*",
+      "server.cjs"
+    ],
+    "extraFiles": [
+      {
+        "from": "server.cjs",
+        "to": "resources/app.asar.unpacked/server.cjs"
+      }
+    ]
   }
 }

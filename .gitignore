@@ -11,6 +11,16 @@ node_modules
 dist
 dist-ssr
 *.local
+dist-electron
+_staging
+release
+release-clean
+release-android
+release-apk
+release-electron-builder
+_build
+*.asar
+_app.asar
 
 # Editor directories and files
 .vscode/*
@@ -22,3 +32,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+main.js
+tsconfig.electron.tsbuildinfo
+*.jar
+*.png
+*.xml

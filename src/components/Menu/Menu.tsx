@@ -1,6 +1,6 @@
 import React, { useState, useEffect, memo } from 'react';
 import { motion } from 'framer-motion';
-import { LanPeerManager } from '../../network/lan-peer';
+import { LanPeerManager, type ServerMode } from '../../network/lan-peer';
 
 interface MenuProps {
   onStartSingle: () => void;
@@ -15,9 +15,20 @@ const Menu: React.FC<MenuProps> = memo(({
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showLanPanel, setShowLanPanel] = useState(false);
+  const [serverMode, setServerMode] = useState<ServerMode>(() => {
+    const urlServer = LanPeerManager.getServerFromUrl();
+    const savedServer = LanPeerManager.getSavedServer();
+    if (urlServer) return 'custom';
+    if (savedServer && savedServer.host !== '127.0.0.1') return 'custom';
+    return 'embedded';
+  });
 
-  // Server config
-  const [serverHost, setServerHost] = useState('127.0.0.1');
+  // Server config (only used in custom mode)
+  const [serverHost, setServerHost] = useState(() => {
+    const urlServer = LanPeerManager.getServerFromUrl();
+    if (urlServer) return urlServer.host;
+    return '127.0.0.1';
+  });
   const [serverPort, setServerPort] = useState('9000');
 
   // Create room
@@ -55,6 +66,15 @@ const Menu: React.FC<MenuProps> = memo(({
   const handleCreate = () => {
     const code = createRoomCode.trim().toUpperCase() || LanPeerManager.generateRoomCode();
     onStartLanHost(code);
+  };
+
+  const handleServerModeChange = (mode: ServerMode) => {
+    setServerMode(mode);
+    LanPeerManager.getInstance().setServerMode(mode);
+    if (mode === 'embedded') {
+      setServerHost('127.0.0.1');
+      LanPeerManager.getInstance().setServerConfig({ host: '127.0.0.1', port: 9000 });
+    }
   };
 
   return (
@@ -122,36 +142,63 @@ const Menu: React.FC<MenuProps> = memo(({
         >
           <h3 className={`text-white font-bold text-center mb-2 sm:mb-3 ${isPhone ? 'text-sm' : 'text-base'}`}>局域网联机</h3>
 
-          {/* Server Config */}
+          {/* Server Mode Selector */}
           <div className="mb-2 sm:mb-3">
-            <label className={`${labelSize} text-white/60 block mb-1 text-center`}>PeerJS 服务器</label>
+            <label className={`${labelSize} text-white/60 block mb-1 text-center`}>连接模式</label>
             <div className="flex gap-1.5 sm:gap-2">
-              <input
-                type="text"
-                value={serverHost}
-                onChange={(e) => setServerHost(e.target.value)}
-                placeholder="IP 地址"
-                className={`flex-1 rounded-lg text-white font-mono ${inputSize}`}
-                style={{
-                  background: 'rgba(255,255,255,0.1)',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  outline: 'none',
-                }}
-              />
-              <input
-                type="text"
-                value={serverPort}
-                onChange={(e) => setServerPort(e.target.value.replace(/\D/g, '').slice(0, 5))}
-                placeholder="端口"
-                className={`w-16 sm:w-20 rounded-lg text-white font-mono ${inputSize}`}
-                style={{
-                  background: 'rgba(255,255,255,0.1)',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  outline: 'none',
-                }}
-              />
+              {(['embedded', 'custom'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => handleServerModeChange(mode)}
+                  className={`flex-1 rounded-lg text-xs font-medium transition-all ${isPhone ? 'py-1.5' : 'py-2'}`}
+                  style={{
+                    background: serverMode === mode
+                      ? 'linear-gradient(135deg, #2ecc71, #27ae60)'
+                      : 'rgba(255,255,255,0.1)',
+                    color: serverMode === mode ? 'white' : 'rgba(255,255,255,0.5)',
+                  }}
+                >
+                  {mode === 'embedded' ? '内嵌服务器' : '局域网'}
+                </button>
+              ))}
             </div>
+            <p className={`text-white/40 text-center mt-1 ${isPhone ? 'text-[8px]' : 'text-[10px]'}`}>
+              {serverMode === 'embedded' ? 'EXE 内嵌，无需配置' : '连接局域网内其他设备的服务器'}
+            </p>
           </div>
+
+          {/* Server Config (custom mode only) */}
+          {serverMode === 'custom' && (
+            <div className="mb-2 sm:mb-3">
+              <label className={`${labelSize} text-white/60 block mb-1 text-center`}>PeerJS 服务器</label>
+              <div className="flex gap-1.5 sm:gap-2">
+                <input
+                  type="text"
+                  value={serverHost}
+                  onChange={(e) => setServerHost(e.target.value)}
+                  placeholder="IP 地址"
+                  className={`flex-1 rounded-lg text-white font-mono ${inputSize}`}
+                  style={{
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    outline: 'none',
+                  }}
+                />
+                <input
+                  type="text"
+                  value={serverPort}
+                  onChange={(e) => setServerPort(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                  placeholder="端口"
+                  className={`w-16 sm:w-20 rounded-lg text-white font-mono ${inputSize}`}
+                  style={{
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Create Room */}
           <div className="mb-2 sm:mb-3">
