@@ -807,8 +807,8 @@ function App() {
     <div className="relative w-full h-full flex flex-col overflow-visible" style={{
       background: 'linear-gradient(180deg, var(--color-bg-gradient-start, #0d5e28) 0%, var(--color-bg-gradient-end, #094a20) 100%)',
     }}>
-      {/* Top bar — with safe-area-inset-top to clear status bar */}
-      <div className="flex items-center justify-between px-2 py-1 sm:px-4 sm:py-2 bg-black/0 shrink-0 fixed top-0 left-0 right-0 z-50" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+      {/* Top bar — avoid status bar and corner curves */}
+      <div className="flex items-center justify-between px-2 py-1 sm:px-4 sm:py-2 bg-black/0 shrink-0 fixed top-0 left-0 right-0 z-50" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 8px)' }}>
         <div className="relative" onClick={(e) => e.stopPropagation()}>
           <button
             className="text-white/60 hover:text-white transition-colors"
@@ -937,8 +937,8 @@ function App() {
         </div>
       </div>
 
-      {/* Bottom: human hand */}
-      <div className="shrink-0 flex flex-col items-center w-full pb-1 sm:pb-3 pt-2 px-0.5 sm:px-4 relative z-10" style={{ marginTop: '4px' }}>
+      {/* Bottom: human hand — avoid navigation bar and corner curves */}
+      <div className="shrink-0 flex flex-col items-center w-full pb-1 sm:pb-3 pt-2 px-0.5 sm:px-4 relative z-10" style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)', marginTop: '4px' }}>
 
         {isPassingPhase ? (
           /* ── Passing Phase UI ── */
