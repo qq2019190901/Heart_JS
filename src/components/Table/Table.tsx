@@ -70,18 +70,18 @@ const Table: React.FC<TableProps> = memo(({
   // Top AI hand: horizontal fan, pinned to top edge, horizontally centered
   const topFanW = (13 - 1) * fanStepX + aiCardW;
   const topHandLeft = (cw - topFanW) / 2;
-  const topHandTop = 0;
+  const topHandTop = aiHandOffset;
   const topHandBottom = topHandTop + aiCardH;
 
-  // Left AI hand: vertical fan, pinned to left edge, vertically centered
+  // Left AI hand: vertical fan, inset from left edge
   const leftFanH = (13 - 1) * fanStepY + aiCardH;
-  const leftHandLeft = 0;
+  const leftHandLeft = aiHandOffset;
   const leftHandTop = (ch - leftFanH) / 2;
   const leftHandBottom = leftHandTop + leftFanH;
   const leftHandRight = leftHandLeft + aiCardW;
 
-  // Right AI hand: vertical fan, pinned to right edge, vertically centered
-  const rightHandLeft = cw - aiCardW;
+  // Right AI hand: vertical fan, inset from right edge
+  const rightHandLeft = cw - aiCardW - aiHandOffset;
   const rightHandTop = (ch - leftFanH) / 2;
   const rightHandBottom = rightHandTop + leftFanH;
 
