@@ -238,7 +238,7 @@ const Table: React.FC<TableProps> = memo(({
         const isActive = currentPlayerId === humanPlayerId;
         const badgeLeft = tcx;
         // Position badge just below the table, with proper spacing
-        const badgeTop = tableBottom - 37;
+        const badgeTop = tableBottom - 34;
         return (
           <div
             key={humanPlayer.id}
