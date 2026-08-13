@@ -395,7 +395,7 @@ function App() {
       cardH: _cardH,
       tablePad: Math.round(2 + tableT * 4),
       // Minimum 40px to clear rounded corners (~44px radius on this device)
-      aiHandOffset: Math.max(40, Math.round(8 + tableT * 52)),
+      aiHandOffset: Math.max(16, Math.round(8 + tableT * 52)),
       trickOverlapBase: Math.round(12 + tableT * 24),
       trickOverlapStep: Math.max(8, Math.round(8 + tableT * 14)),
       badgeOff: Math.round(8 + tableT * 10),
@@ -809,7 +809,7 @@ function App() {
       background: 'linear-gradient(180deg, var(--color-bg-gradient-start, #0d5e28) 0%, var(--color-bg-gradient-end, #094a20) 100%)',
     }}>
       {/* Top bar — clear status bar (40px) and corner curve */}
-      <div className="flex items-center justify-between px-2 py-1 sm:px-4 sm:py-2 bg-black/0 shrink-0 fixed top-0 left-0 right-0 z-50" style={{ paddingTop: '60px' }}>
+      <div className="flex items-center justify-between px-2 py-1 sm:px-4 sm:py-2 bg-black/0 shrink-0 fixed top-0 left-0 right-0 z-50" style={{ paddingTop: '20px' }}>
         <div className="relative" onClick={(e) => e.stopPropagation()}>
           <button
             className="text-white/60 hover:text-white transition-colors"
@@ -939,7 +939,7 @@ function App() {
       </div>
 
       {/* Bottom: human hand — offset from bottom edge to clear corner curves */}
-      <div className="shrink-0 flex flex-col items-center w-full pb-1 sm:pb-3 pt-2 px-0.5 sm:px-4 relative z-10" style={{ paddingBottom: '80px', marginTop: '8px' }}>
+      <div className="shrink-0 flex flex-col items-center w-full pb-1 sm:pb-3 pt-2 px-0.5 sm:px-4 relative z-10" style={{ paddingBottom: '20px', marginTop: '8px' }}>
 
         {isPassingPhase ? (
           /* ── Passing Phase UI ── */
