@@ -230,13 +230,15 @@ const Table: React.FC<TableProps> = memo(({
         );
       })}
 
-      {/* ── Human Player Badge (bottom) ──────────────────────────── */}
+      {/* ── Human Player Badge (bottom) — positioned below table ── */}
+      {/* Rendered outside table bounds to avoid clipping */}
       {(() => {
         const humanPlayer = players.find(p => p.id === humanPlayerId);
         if (!humanPlayer) return null;
         const isActive = currentPlayerId === humanPlayerId;
         const badgeLeft = tcx;
-        const badgeTop = tableBottom - badgeOff;
+        // Position badge just below the table, with proper spacing
+        const badgeTop = tableBottom - 70;
         return (
           <div
             key={humanPlayer.id}
@@ -245,7 +247,7 @@ const Table: React.FC<TableProps> = memo(({
               position: 'absolute',
               left: `${badgeLeft}px`,
               top: `${badgeTop}px`,
-              transform: 'translate(-50%, -50%)',
+              transform: 'translate(-50%, 0)',
               zIndex: 10,
             }}
             aria-label={`${humanPlayer.name} 当前 ${humanPlayer.score} 分`}
@@ -258,13 +260,10 @@ const Table: React.FC<TableProps> = memo(({
               }`}
               style={{ fontSize: `${badgeFontSizePx}px` }}
             >
-              {humanPlayer.name}
-              {isActive && <span className="ml-0.5 animate-pulse" aria-hidden="true">&#9679;</span>}
-              <span
-                className="text-white/60 bg-black/40 px-1 py-0.5 rounded-full"
-                style={{ fontSize: `${scoreFontSizePx}px` }}
-              >
-                {humanPlayer.score} 分
+              <span>{humanPlayer.name}</span>
+              {isActive && <span className="animate-pulse" aria-hidden="true">●</span>}
+              <span className="text-white/60 bg-black/40 px-1 py-0.5 rounded-full">
+                {humanPlayer.score}分
               </span>
               {passConfirmAction}
             </div>
@@ -272,24 +271,24 @@ const Table: React.FC<TableProps> = memo(({
         );
       })()}
 
-      {/* ── Turn Status (above human badge) ──────────────────────── */}
+      {/* ── Turn Status (above human area) ──────────────────────── */}
       {turnStatus && (() => {
-        const badgeTop = tableBottom - badgeOff;
-        console.log('[TABLE] badgeTop:', badgeTop, 'tableBottom:', tableBottom, 'badgeOff:', badgeOff, 'tcx:', tcx);
+        const statusTop = tableBottom - 68;
         return (
           <div
             className="pointer-events-none"
             style={{
               position: 'absolute',
               left: `${tcx}px`,
-              top: `${badgeTop}px`,
-              transform: 'translate(-50%, calc(-100% - 12px))',
+              top: `${statusTop}px`,
+              transform: 'translate(-50%, 0)',
               zIndex: 11,
+              textAlign: 'center',
             }}
             aria-live="polite"
             role="status"
           >
-            <div style={{ fontSize: `${badgeFontSizePx}px` }}>
+            <div style={{ fontSize: `${badgeFontSizePx + 1}px`, lineHeight: '1.2' }}>
               {turnStatus}
             </div>
           </div>

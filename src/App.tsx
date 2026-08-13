@@ -881,7 +881,7 @@ function App() {
       </div>
 
       {/* Table area — unified arena with hand, overflow-hidden keeps table inside */}
-      <div className="flex-1 flex flex-col min-h-0 relative overflow-hidden">
+      <div className="flex-1 flex flex-col min-h-0 relative overflow-visible">
         <div className="flex-1 flex items-center justify-center p-0.5 sm:p-4 min-h-0 -mx-0.5 sm:-mx-4">
         <Table
           trick={gameState.currentTrick}
@@ -912,26 +912,26 @@ function App() {
             )
           }
           passConfirmAction={isPassingPhase ? (
-            <>
+            <div className="flex flex-col items-center gap-0.5 mt-0.5">
               <button
                 onClick={handlePassConfirm}
                 disabled={selectedPassCardIds.size !== maxPass}
-                className={`font-bold rounded-lg transition-colors shadow-lg ${
-                  resp.minDim < 450 ? 'px-2 py-0.5 text-[10px]' : resp.minDim < 600 ? 'px-3 py-1 text-xs' : 'px-4 py-1.5 text-sm'
+                className={`font-bold rounded transition-colors ${
+                  resp.minDim < 450 ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1 text-xs'
                 } ${
                   selectedPassCardIds.size === maxPass
                     ? 'bg-yellow-500 hover:bg-yellow-400 text-gray-900'
                     : 'bg-gray-400 text-gray-200 cursor-not-allowed'
                 }`}
               >
-                确认传递 ✓
+                确认 ✓
               </button>
               {mode === 'lan' && (lanClientSentPass || lanPassSending) && (
-                <div className="text-white/70 font-semibold text-[10px]">
-                  {lanPassSending ? '已传递，等待其他玩家...' : '已传递，等待其他玩家...'}
+                <div className="text-white/60 text-[8px]">
+                  {lanPassSending ? '等待其他玩家...' : '已传递'}
                 </div>
               )}
-            </>
+            </div>
           ) : undefined}
           settlementCards={isSettlement ? gameState!.trickCardsWon : undefined}
         />
