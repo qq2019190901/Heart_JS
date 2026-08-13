@@ -238,7 +238,7 @@ const Table: React.FC<TableProps> = memo(({
         const isActive = currentPlayerId === humanPlayerId;
         const badgeLeft = tcx;
         // Position badge just below the table, with proper spacing
-        const badgeTop = tableBottom - 70;
+        const badgeTop = tableBottom - 40;
         return (
           <div
             key={humanPlayer.id}
@@ -273,7 +273,7 @@ const Table: React.FC<TableProps> = memo(({
 
       {/* ── Turn Status (above human area) ──────────────────────── */}
       {turnStatus && (() => {
-        const statusTop = tableBottom - 68;
+        const statusTop = tableBottom - 65;
         return (
           <div
             className="pointer-events-none"
