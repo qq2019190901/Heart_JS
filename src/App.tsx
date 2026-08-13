@@ -901,6 +901,8 @@ function App() {
                   向 <span className="text-yellow-300 font-semibold">{passLabel}</span> 选择 {maxPass} 张牌
                 </div>
               </div>
+            ) : gameState.phase === 'dealing' ? (
+              null
             ) : gameState.currentPlayerId === humanId && !waitingForAi ? (
               <div className="text-green-300 animate-pulse font-semibold">轮到你了！</div>
             ) : waitingForAi ? (
