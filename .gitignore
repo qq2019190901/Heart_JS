@@ -36,4 +36,3 @@ main.js
 tsconfig.electron.tsbuildinfo
 *.jar
 *.png
-*.xml
