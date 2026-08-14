@@ -268,16 +268,27 @@ const Menu: React.FC<MenuProps> = memo(({
       )}
 
       {/* Exit button — Electron only */}
-      <button
-        className={`mt-3 text-white/25 hover:text-red-400 transition-colors z-10 ${isPhone ? 'text-[9px]' : isTablet ? 'text-xs' : 'text-xs sm:text-sm'}`}
-        onClick={() => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (window as any).electronAPI?.exit();
-        }}
-        style={{ display: typeof (window as any).electronAPI !== 'undefined' ? '' : 'none' }}
-      >
-        退出游戏
-      </button>
+      {(typeof (window as any).electronAPI !== 'undefined') && (
+        <motion.button
+          className={`px-4 sm:px-6 rounded-xl text-white/60 font-semibold tracking-wide transition-all whitespace-nowrap ${btnSize}`}
+          style={{
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            backdropFilter: 'blur(10px)',
+          }}
+          onClick={() => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (window as any).electronAPI?.exit();
+          }}
+          initial={{ opacity: 0, x: -30 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ delay: 0.6, duration: 0.5 }}
+          whileHover={{ scale: 1.03, background: 'rgba(239,68,68,0.15)', color: '#fca5a5' }}
+          whileTap={{ scale: 0.97 }}
+        >
+          <div>退出游戏</div>
+        </motion.button>
+      )}
 
       {/* Rules toggle */}
       <motion.button
