@@ -228,9 +228,6 @@ function App() {
   const handleLanCreateRoom = useCallback((customRoomId: string) => {
     setMode('lan');
 
-    // Set server config before connecting
-    lanPeer.setServerConfig({ host: lanServerHost, port: parseInt(lanServerPort) || 9000 });
-
     setLanConnected(true);
     setLanStatus('waiting');
     setLanIsHost(true);
@@ -239,10 +236,11 @@ function App() {
     setLanPlayers([]);
     lanPlayersRef.current = [];
 
+    // initAsHost will auto-resolve Android local IP via resolveServerConfig()
     lanPeer.initAsHost(playerName, customRoomId || undefined)
       .then((id) => {
         setLanRoomCode(id);
-        console.log(`[LAN] Host room created: ${id}, my PeerJS ID:`, lanPeer.myId);
+        console.log(`[LAN] Host room created: ${id}, my PeerJS ID:`, lanPeer.myId, 'server:', lanPeer.serverConfig.host);
         // Now we have the real PeerJS-assigned ID
         lanPlayerIdRef.current = lanPeer.myId;
         const initialPlayers = [{ id: lanPeer.myId, name: playerName, isAi: false }];
@@ -291,6 +289,20 @@ function App() {
       });
   }, [playerName]);
 
+  // ========== LAN: Add AI Player ==========
+
+  const handleAddAi = useCallback(() => {
+    if (!lanIsHost || !lanConnected) return;
+    const aiCount = lanPlayersRef.current.filter(p => p.isAi).length;
+    if (aiCount >= 3) return; // max 3 AI + 1 human
+    const aiIdx = aiCount + 1;
+    const newPlayer = { id: `ai-fill-${aiIdx}`, name: `AI ${aiIdx}`, isAi: true };
+    const updated = [...lanPlayersRef.current, newPlayer];
+    setLanPlayers(updated);
+    lanPlayersRef.current = updated;
+    lanPeer.broadcastPlayerList(updated.map(p => ({ id: p.id, name: p.name })));
+  }, [lanIsHost, lanConnected]);
+
   const handleLanStartGame = useCallback(() => {
     if (!lanIsHost || !lanConnected) return;
     setLanStatus('ready');
@@ -312,22 +324,11 @@ function App() {
       players.unshift(hostPlayer);
     }
 
-    // Fill remaining slots with AI
-    while (players.length < 4) {
-      const aiIdx = players.length + 1;
-      players.push({
-        id: `ai-fill-${aiIdx}`,
-        name: `AI ${aiIdx}`,
-        score: 0,
-        isAi: true,
-        isHuman: false,
-        difficulty: 'medium',
-      });
-    }
-
     const state = createInitialState(players);
     setGameState(state);
     setHumanId(lanPlayerIdRef.current);
+    // Broadcast full player list + game state to clients
+    lanPeer.broadcast(state);
   }, [lanIsHost, lanConnected]);
 
   const handleLanLeave = useCallback(() => {
@@ -731,9 +732,11 @@ function App() {
         isHost={lanIsHost}
         players={lanPlayers}
         onReady={handleLanStartGame}
+        onAddAi={handleAddAi}
         onCancel={handleLanLeave}
         status={lanStatus}
         errorMessage={lanErrorMessage}
+        serverHost={lanPeer.serverConfig.host}
       />
     );
   }

@@ -158,12 +158,12 @@ const Menu: React.FC<MenuProps> = memo(({
                     color: serverMode === mode ? 'white' : 'rgba(255,255,255,0.5)',
                   }}
                 >
-                  {mode === 'embedded' ? '内嵌服务器' : '局域网'}
+                  {mode === 'embedded' ? '我来当房主' : '加入别人房间'}
                 </button>
               ))}
             </div>
             <p className={`text-white/40 text-center mt-1 ${isPhone ? 'text-[8px]' : 'text-[10px]'}`}>
-              {serverMode === 'embedded' ? 'EXE 内嵌，无需配置' : '连接局域网内其他设备的服务器'}
+              {serverMode === 'embedded' ? '自动启动服务器，等待他人加入' : '输入他人的房间号或 IP 加入'}
             </p>
           </div>
 
@@ -200,63 +200,70 @@ const Menu: React.FC<MenuProps> = memo(({
             </div>
           )}
 
-          {/* Create Room */}
-          <div className="mb-2 sm:mb-3">
-            <label className={`${labelSize} text-white/60 block mb-1 text-center`}>创建房间</label>
-            <div className="flex gap-1.5 sm:gap-2">
-              <input
-                type="text"
-                value={createRoomCode}
-                onChange={(e) => setCreateRoomCode(e.target.value.toUpperCase().slice(0, 12))}
-                placeholder="房间号（留空自动生成）"
-                className={`flex-1 rounded-lg text-white tracking-widest font-mono ${inputSize}`}
-                style={{
-                  background: 'rgba(255,255,255,0.1)',
-                  border: '1px solid rgba(255,255,255,0.2)',
-                  outline: 'none',
-                }}
-                maxLength={12}
-              />
-              <button
-                className={`px-3 sm:px-4 rounded-lg text-white font-semibold transition-all ${isPhone ? 'text-xs py-1.5' : 'text-sm py-2'}`}
-                style={{
-                  background: 'linear-gradient(135deg, #2ecc71, #27ae60)',
-                  boxShadow: '0 2px 10px rgba(46,204,113,0.3)',
-                }}
-                onClick={handleCreate}
-              >
-                创建
-              </button>
+          {/* Create Room (host mode only) */}
+          {serverMode === 'embedded' && (
+            <div className="mb-2 sm:mb-3">
+              <label className={`${labelSize} text-white/60 block mb-1 text-center`}>创建房间</label>
+              <div className="flex gap-1.5 sm:gap-2">
+                <input
+                  type="text"
+                  value={createRoomCode}
+                  onChange={(e) => setCreateRoomCode(e.target.value.toUpperCase().slice(0, 12))}
+                  placeholder="房间号（留空自动生成）"
+                  className={`flex-1 rounded-lg text-white tracking-widest font-mono ${inputSize}`}
+                  style={{
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    outline: 'none',
+                  }}
+                  maxLength={12}
+                />
+                <button
+                  className={`px-3 sm:px-4 rounded-lg text-white font-semibold transition-all ${isPhone ? 'text-xs py-1.5' : 'text-sm py-2'}`}
+                  style={{
+                    background: 'linear-gradient(135deg, #2ecc71, #27ae60)',
+                    boxShadow: '0 2px 10px rgba(46,204,113,0.3)',
+                  }}
+                  onClick={handleCreate}
+                >
+                  创建
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Join Room */}
-          <div className="flex gap-1.5 sm:gap-2">
-            <input
-              type="text"
-              value={joinRoomCode}
-              onChange={(e) => setJoinRoomCode(e.target.value.toUpperCase().slice(0, 12))}
-              placeholder="房间号"
-              className={`flex-1 rounded-lg text-white tracking-widest font-mono ${inputSize}`}
-              style={{
-                background: 'rgba(255,255,255,0.1)',
-                border: '1px solid rgba(255,255,255,0.2)',
-                outline: 'none',
-              }}
-              maxLength={12}
-            />
-            <button
-              className={`px-3 sm:px-4 rounded-lg text-white font-semibold transition-all ${isPhone ? 'text-xs py-1.5' : 'text-sm py-2'}`}
-              style={{
-                background: 'linear-gradient(135deg, #3498db, #2980b9)',
-                boxShadow: '0 2px 10px rgba(52,152,219,0.3)',
-              }}
-              onClick={handleJoin}
-              disabled={joinRoomCode.length < 3}
-            >
-              加入
-            </button>
-          </div>
+          {/* Join Room (client mode only) */}
+          {serverMode === 'custom' && (
+            <div className="mb-2 sm:mb-3">
+              <label className={`${labelSize} text-white/60 block mb-1 text-center`}>加入房间</label>
+              <div className="flex gap-1.5 sm:gap-2">
+                <input
+                  type="text"
+                  value={joinRoomCode}
+                  onChange={(e) => setJoinRoomCode(e.target.value.toUpperCase().slice(0, 12))}
+                  placeholder="房间号"
+                  className={`flex-1 rounded-lg text-white tracking-widest font-mono ${inputSize}`}
+                  style={{
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    outline: 'none',
+                  }}
+                  maxLength={12}
+                />
+                <button
+                  className={`px-3 sm:px-4 rounded-lg text-white font-semibold transition-all ${isPhone ? 'text-xs py-1.5' : 'text-sm py-2'}`}
+                  style={{
+                    background: 'linear-gradient(135deg, #3498db, #2980b9)',
+                    boxShadow: '0 2px 10px rgba(52,152,219,0.3)',
+                  }}
+                  onClick={handleJoin}
+                  disabled={joinRoomCode.length < 3}
+                >
+                  加入
+                </button>
+              </div>
+            </div>
+          )}
         </motion.div>
       )}
 

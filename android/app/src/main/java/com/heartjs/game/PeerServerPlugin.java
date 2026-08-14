@@ -1,11 +1,10 @@
-package com.heartjs.plugin;
+package com.heartjs.game;
 
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
-
-import org.java_websocket.interfaces.IWebSocket;
+import com.getcapacitor.JSObject;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -18,15 +17,10 @@ public class PeerServerPlugin extends Plugin {
     @PluginMethod
     public void getServerStatus(PluginCall call) {
         String ip = getLocalIpAddress();
-        org.json.JSONObject result = new org.json.JSONObject();
-        try {
-            result.put("ip", ip);
-            result.put("port", 9000);
-            result.put("url", "ws://" + ip + ":9000/peerjs");
-        } catch (Exception e) {
-            call.error("Failed to build result: " + e.getMessage());
-            return;
-        }
+        JSObject result = new JSObject();
+        result.put("ip", ip);
+        result.put("port", 9000);
+        result.put("url", "ws://" + ip + ":9000/peerjs");
         call.resolve(result);
     }
 

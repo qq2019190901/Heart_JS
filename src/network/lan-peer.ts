@@ -32,6 +32,41 @@ export class LanPeerManager {
   private _serverMode: ServerMode = 'embedded';
   private _androidLocalIp: string = '';
   private _lanClientPasses: Record<string, Card[]> = {};
+  private _isAndroid = false;
+
+  /** Detect if running inside Capacitor/Android WebView */
+  private detectAndroid(): boolean {
+    if (typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent)) {
+      this._isAndroid = true;
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Resolve server config for the current environment.
+   * On Android, polls for the local WiFi IP injected by native code via window.__localIp.
+   * Returns the resolved config; the caller must set it via setServerConfig().
+   */
+  async resolveServerConfig(): Promise<LanServerConfig | null> {
+    // Detect Android at call time (navigator not available at construction)
+    this.detectAndroid();
+    if (!this._isAndroid) return null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const win = window as any;
+    // Poll up to 3s for the native-injected IP
+    for (let i = 0; i < 6; i++) {
+      const ip = win.__localIp || (win.AndroidBridge ? win.AndroidBridge.getLocalIp() : undefined);
+      if (ip && ip !== '127.0.0.1') {
+        const config: LanServerConfig = { host: ip, port: 9000 };
+        this.setAndroidLocalIp(ip);
+        this.setServerConfig(config);
+        return config;
+      }
+      await new Promise(r => setTimeout(r, 500));
+    }
+    return null;
+  }
 
   get clientPasses(): Record<string, Card[]> { return this._lanClientPasses; }
   set clientPasses(v: Record<string, Card[]>) { this._lanClientPasses = v; }
@@ -44,6 +79,7 @@ export class LanPeerManager {
   get guestConnections() { return new Map(this.guestConns); }
   get serverMode() { return this._serverMode; }
   get androidLocalIp() { return this._androidLocalIp; }
+  get isAndroid() { return this._isAndroid; }
 
   static createPeerId(): string {
     return `p-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
@@ -124,7 +160,12 @@ export class LanPeerManager {
    *                  If unavailable, server auto-assigns one.
    * @returns The actual room ID (may differ from desiredId if taken)
    */
-  initAsHost(myName: string, desiredId?: string): Promise<string> {
+  async initAsHost(myName: string, desiredId?: string): Promise<string> {
+    // Auto-detect Android local IP before starting
+    const androidCfg = await this.resolveServerConfig();
+    if (androidCfg) {
+      console.log(`[LAN-HOST] Android detected, using server: ${androidCfg.host}:${androidCfg.port}`);
+    }
     return new Promise((resolve, reject) => {
       this._role = 'host';
       const opts = this.getPeerOptions();

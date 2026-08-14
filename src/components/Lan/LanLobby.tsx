@@ -7,9 +7,11 @@ interface LanLobbyProps {
   isHost: boolean;
   players: { id: string; name: string; isAi: boolean }[];
   onReady?: () => void;
+  onAddAi?: () => void;
   onCancel: () => void;
   status: 'waiting' | 'ready' | 'connecting' | 'error';
   errorMessage?: string;
+  serverHost?: string;
 }
 
 const LanLobby: React.FC<LanLobbyProps> = memo(({
@@ -18,9 +20,11 @@ const LanLobby: React.FC<LanLobbyProps> = memo(({
   isHost,
   players,
   onReady,
+  onAddAi,
   onCancel,
   status,
   errorMessage,
+  serverHost,
 }) => {
   const [copied, setCopied] = useState(false);
   const [minDim, setMinDim] = useState(Math.min(window.innerWidth, window.innerHeight));
@@ -94,6 +98,11 @@ const LanLobby: React.FC<LanLobbyProps> = memo(({
                 {copied ? '已复制' : '复制'}
               </button>
             </div>
+            {serverHost && (
+              <p className={`text-white/40 text-center mt-1 ${isPhone ? 'text-[8px]' : 'text-[10px]'}`}>
+                连接地址：{serverHost}:9000
+              </p>
+            )}
           </div>
         )}
 
@@ -143,31 +152,44 @@ const LanLobby: React.FC<LanLobbyProps> = memo(({
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-1.5 sm:gap-2">
+        <div className="flex flex-col gap-1.5 sm:gap-2">
           {isHost && onReady && (
-            <button
-              onClick={onReady}
-              disabled={status === 'connecting' || players.length < 2}
-              className={`flex-1 rounded-lg font-semibold transition-all ${btnPadding} ${btnFontSize}`}
-              style={{
-                background: status !== 'connecting' && players.length >= 2
-                  ? 'linear-gradient(135deg, #2ecc71, #27ae60)'
-                  : 'rgba(255,255,255,0.1)',
-                color: status !== 'connecting' && players.length >= 2 ? 'white' : 'rgba(255,255,255,0.4)',
-              }}
-            >
-              {players.length >= 2 ? '开始游戏' : `等待加入 (${players.length}/4)`}
-            </button>
+            <>
+              {/* Add AI button */}
+              {players.filter(p => p.isAi).length < 3 && (
+                <button
+                  onClick={onAddAi}
+                  className={`w-full rounded-lg font-semibold transition-all ${btnPadding} ${btnFontSize}`}
+                  style={{ background: 'rgba(52,152,219,0.6)', color: 'white' }}
+                >
+                  + 添加 AI 对手 ({3 - players.filter(p => p.isAi).length} 个空缺)
+                </button>
+              )}
+              {/* Start game button */}
+              <button
+                onClick={onReady}
+                disabled={status === 'connecting' || players.length < 2}
+                className={`w-full rounded-lg font-semibold transition-all ${btnPadding} ${btnFontSize}`}
+                style={{
+                  background: status !== 'connecting' && players.length >= 2
+                    ? 'linear-gradient(135deg, #2ecc71, #27ae60)'
+                    : 'rgba(255,255,255,0.1)',
+                  color: status !== 'connecting' && players.length >= 2 ? 'white' : 'rgba(255,255,255,0.4)',
+                }}
+              >
+                {players.length >= 2 ? '开始游戏' : `等待加入 (${players.length}/4)`}
+              </button>
+            </>
           )}
           {!isHost && (
-            <div className={`flex-1 rounded-lg font-semibold text-center ${btnPadding} ${btnFontSize}`}
+            <div className={`w-full rounded-lg font-semibold text-center ${btnPadding} ${btnFontSize}`}
               style={{ background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.5)' }}>
               等待房主开始游戏
             </div>
           )}
           <button
             onClick={onCancel}
-            className={`flex-1 rounded-lg font-semibold transition-all ${btnPadding} ${btnFontSize}`}
+            className={`w-full rounded-lg font-semibold transition-all ${btnPadding} ${btnFontSize}`}
             style={{
               background: 'rgba(255,255,255,0.1)',
               color: 'rgba(255,255,255,0.7)',
