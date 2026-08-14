@@ -192,24 +192,23 @@ const Menu: React.FC<MenuProps> = memo(({
         />
       </div>
 
-      {/* Theme toggle button — always visible */}
-      <motion.button
-        className="mb-4 z-10 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all"
+      {/* Theme toggle button — top-right corner, icon only */}
+      <button
+        className="fixed top-4 right-4 z-30 w-9 h-9 rounded-full flex items-center justify-center text-xl transition-all active:scale-90"
         style={{
-          background: 'var(--menu-btn-bg, rgba(255,255,255,0.08))',
-          border: '1px solid var(--menu-btn-border, rgba(139,92,246,0.4))',
-          color: 'var(--menu-text-muted, rgba(255,255,255,0.5))',
-          backdropFilter: 'blur(10px)',
+          background: theme === 'modern'
+            ? 'rgba(139,92,246,0.2)'
+            : 'rgba(0,0,0,0.25)',
+          border: theme === 'modern'
+            ? '1px solid rgba(139,92,246,0.4)'
+            : '1px solid rgba(255,255,255,0.2)',
+          backdropFilter: 'blur(8px)',
         }}
         onClick={() => onThemeChange?.(theme === 'classic' ? 'modern' : 'classic')}
-        whileTap={{ scale: 0.97 }}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5, duration: 0.5 }}
+        aria-label="切换主题"
       >
-        <span>{theme === 'classic' ? '🌙' : '🟢'}</span>
-        <span>{theme === 'classic' ? '切换到现代暗色' : '切换到经典绿毡'}</span>
-      </motion.button>
+        {theme === 'classic' ? '🌙' : '🟢'}
+      </button>
 
       {/* LAN Panel */}
       {showLanPanel && (
