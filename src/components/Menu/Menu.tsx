@@ -58,6 +58,22 @@ const Menu: React.FC<MenuProps> = memo(({
   const subtitleSize = isPhone ? 'text-[9px]' : isTablet ? 'text-xs sm:text-sm' : 'text-sm sm:text-lg md:text-xl';
   const buttonWidth = isPhone ? 'w-44 sm:w-52' : 'w-52 sm:w-64';
   const lanPanelWidth = isPhone ? 'w-64 sm:w-72' : 'w-72 sm:w-80';
+
+  // Theme-aware colors for LAN panel
+  const lanIsClassic = theme === 'classic';
+  const lanPanelBg = lanIsClassic
+    ? 'linear-gradient(135deg, rgba(255,255,255,0.97) 0%, rgba(255,255,255,0.92) 100%)'
+    : 'linear-gradient(135deg, rgba(18,18,30,0.9) 0%, rgba(26,26,46,0.9) 100%)';
+  const lanPanelBorder = lanIsClassic ? 'rgba(0,0,0,0.12)' : 'rgba(139,92,246,0.2)' ;
+  const lanPanelShadow = lanIsClassic
+    ? '0 8px 32px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.8)'
+    : '0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)';
+  const lanColor = lanIsClassic ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.9)' ;
+  const lanColorMuted = lanIsClassic ? 'rgba(0,0,0,0.5)' : 'rgba(255,255,255,0.5)' ;
+  const lanColorSubtle = lanIsClassic ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.35)' ;
+  const lanInputBg = lanIsClassic ? 'rgba(0,0,0,0.06)' : 'rgba(255,255,255,0.06)' ;
+  const lanInputBorder = lanIsClassic ? 'rgba(0,0,0,0.18)' : 'rgba(255,255,255,0.12)' ;
+
   const inputSize = isPhone ? 'text-xs py-1.5 px-2' : isTablet ? 'text-sm py-2 px-3' : 'text-sm py-2 px-3';
   const labelSize = isPhone ? 'text-[9px]' : 'text-xs';
 
@@ -215,20 +231,20 @@ const Menu: React.FC<MenuProps> = memo(({
         <motion.div
           className={`z-20 mt-3 sm:mt-4 ${lanPanelWidth} rounded-xl p-3 sm:p-4`}
           style={{
-            background: 'var(--menu-panel-bg, linear-gradient(135deg, rgba(18,18,30,0.9) 0%, rgba(26,26,46,0.9) 100%))',
+            background: lanPanelBg,
             backdropFilter: 'blur(12px)',
-            border: '1px solid var(--menu-panel-border, rgba(139,92,246,0.2))',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
+            border: `1px solid ${lanPanelBorder}`,
+            boxShadow: lanPanelShadow,
           }}
           initial={{ opacity: 0, y: 10, scale: 0.97 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.3 }}
         >
-          <h3 className={`text-white font-bold text-center mb-2 sm:mb-3 ${isPhone ? 'text-sm' : 'text-base'}`}>局域网联机</h3>
+          <h3 className={`font-bold text-center mb-2 sm:mb-3 ${isPhone ? 'text-sm' : 'text-base'}`} style={{ color: lanColor }}>局域网联机</h3>
 
           {/* Server Mode Selector */}
           <div className="mb-2 sm:mb-3">
-            <label className={`${labelSize} text-white/60 block mb-1 text-center`}>连接模式</label>
+            <label className={`${labelSize} block mb-1 text-center`} style={{ color: lanColorMuted }}>连接模式</label>
             <div className="flex gap-1.5 sm:gap-2">
               {(['embedded', 'custom'] as const).map((mode) => (
                 <button
@@ -238,15 +254,15 @@ const Menu: React.FC<MenuProps> = memo(({
                   style={{
                     background: serverMode === mode
                       ? 'linear-gradient(135deg, var(--accent, #2ecc71), var(--accent-dark, #27ae60))'
-                      : 'var(--menu-input-bg, rgba(255,255,255,0.1))',
-                    color: serverMode === mode ? '#fff' : 'var(--menu-text-muted, rgba(255,255,255,0.5))',
+                      : lanInputBg,
+                    color: serverMode === mode ? '#fff' : lanColorMuted,
                   }}
                 >
                   {mode === 'embedded' ? '我来当房主' : '加入别人房间'}
                 </button>
               ))}
             </div>
-            <p className={`text-white/30 text-center mt-1 ${isPhone ? 'text-[8px]' : 'text-[10px]'}`}>
+            <p className={`text-center mt-1 ${isPhone ? 'text-[8px]' : 'text-[10px]'}`} style={{ color: lanColorSubtle }}>
               {serverMode === 'embedded' ? '自动启动服务器，等待他人加入' : '输入他人的房间号或 IP 加入'}
             </p>
           </div>
@@ -254,18 +270,19 @@ const Menu: React.FC<MenuProps> = memo(({
           {/* Server Config (custom mode only) */}
           {serverMode === 'custom' && (
             <div className="mb-2 sm:mb-3">
-              <label className={`${labelSize} text-white/60 block mb-1 text-center`}>PeerJS 服务器</label>
+              <label className={`${labelSize} block mb-1 text-center`} style={{ color: lanColorMuted }}>PeerJS 服务器</label>
               <div className="flex gap-1.5 sm:gap-2">
                 <input
                   type="text"
                   value={serverHost}
                   onChange={(e) => setServerHost(e.target.value)}
                   placeholder="IP 地址"
-                  className={`flex-1 rounded-lg text-white font-mono ${inputSize}`}
+                  className={`flex-1 rounded-lg font-mono ${inputSize}`}
                   style={{
-                    background: 'var(--menu-input-bg, rgba(255,255,255,0.06))',
-                    border: '1px solid var(--menu-input-border, rgba(255,255,255,0.12))',
+                    background: lanInputBg,
+                    border: `1px solid ${lanInputBorder}`,
                     outline: 'none',
+                    color: lanColor,
                   }}
                 />
                 <input
@@ -273,11 +290,12 @@ const Menu: React.FC<MenuProps> = memo(({
                   value={serverPort}
                   onChange={(e) => setServerPort(e.target.value.replace(/\D/g, '').slice(0, 5))}
                   placeholder="端口"
-                  className={`w-16 sm:w-20 rounded-lg text-white font-mono ${inputSize}`}
+                  className={`w-16 sm:w-20 rounded-lg font-mono ${inputSize}`}
                   style={{
-                    background: 'var(--menu-input-bg, rgba(255,255,255,0.06))',
-                    border: '1px solid var(--menu-input-border, rgba(255,255,255,0.12))',
+                    background: lanInputBg,
+                    border: `1px solid ${lanInputBorder}`,
                     outline: 'none',
+                    color: lanColor,
                   }}
                 />
               </div>
@@ -287,26 +305,32 @@ const Menu: React.FC<MenuProps> = memo(({
           {/* Create Room (host mode only) */}
           {serverMode === 'embedded' && (
             <div className="mb-2 sm:mb-3">
-              <label className={`${labelSize} text-white/60 block mb-1 text-center`}>创建房间</label>
+              <label className={`${labelSize} block mb-1 text-center`} style={{ color: lanColorMuted }}>创建房间</label>
               <div className="flex gap-1.5 sm:gap-2">
                 <input
                   type="text"
                   value={createRoomCode}
                   onChange={(e) => setCreateRoomCode(e.target.value.toUpperCase().slice(0, 12))}
                   placeholder="房间号（留空自动生成）"
-                  className={`flex-1 rounded-lg text-white tracking-widest font-mono ${inputSize}`}
+                  className={`flex-1 rounded-lg tracking-widest font-mono ${inputSize}`}
                   style={{
-                    background: 'var(--menu-input-bg, rgba(255,255,255,0.06))',
-                    border: '1px solid var(--menu-input-border, rgba(255,255,255,0.12))',
+                    background: lanInputBg,
+                    border: `1px solid ${lanInputBorder}`,
                     outline: 'none',
+                    color: lanColor,
                   }}
                   maxLength={12}
                 />
                 <button
-                  className={`px-3 sm:px-4 rounded-lg text-white font-semibold transition-all ${isPhone ? 'text-xs py-1.5' : 'text-sm py-2'}`}
+                  className={`px-3 sm:px-4 rounded-lg font-semibold transition-all ${isPhone ? 'text-xs py-1.5' : 'text-sm py-2'}`}
                   style={{
-                    background: 'linear-gradient(135deg, var(--accent, #2ecc71), var(--accent-dark, #27ae60))',
-                    boxShadow: '0 2px 10px var(--accent-glow, rgba(46,204,113,0.3))',
+                    background: lanIsClassic
+                      ? 'linear-gradient(135deg, #2ecc71, #27ae60)'
+                      : 'linear-gradient(135deg, var(--accent, #2ecc71), var(--accent-dark, #27ae60))',
+                    boxShadow: lanIsClassic
+                      ? '0 2px 10px rgba(46,204,113,0.3)'
+                      : '0 2px 10px var(--accent-glow, rgba(46,204,113,0.3))',
+                    color: '#fff',
                   }}
                   onClick={handleCreate}
                 >
@@ -319,26 +343,33 @@ const Menu: React.FC<MenuProps> = memo(({
           {/* Join Room (client mode only) */}
           {serverMode === 'custom' && (
             <div className="mb-2 sm:mb-3">
-              <label className={`${labelSize} text-white/60 block mb-1 text-center`}>加入房间</label>
+              <label className={`${labelSize} block mb-1 text-center`} style={{ color: lanColorMuted }}>加入房间</label>
               <div className="flex gap-1.5 sm:gap-2">
                 <input
                   type="text"
                   value={joinRoomCode}
                   onChange={(e) => setJoinRoomCode(e.target.value.toUpperCase().slice(0, 12))}
                   placeholder="房间号"
-                  className={`flex-1 rounded-lg text-white tracking-widest font-mono ${inputSize}`}
+                  className={`flex-1 rounded-lg tracking-widest font-mono ${inputSize}`}
                   style={{
-                    background: 'var(--menu-input-bg, rgba(255,255,255,0.06))',
-                    border: '1px solid var(--menu-input-border, rgba(255,255,255,0.12))',
+                    background: lanInputBg,
+                    border: `1px solid ${lanInputBorder}`,
                     outline: 'none',
+                    color: lanColor,
                   }}
                   maxLength={12}
                 />
                 <button
-                  className={`px-3 sm:px-4 rounded-lg text-white font-semibold transition-all ${isPhone ? 'text-xs py-1.5' : 'text-sm py-2'}`}
+                  className={`px-3 sm:px-4 rounded-lg font-semibold transition-all ${isPhone ? 'text-xs py-1.5' : 'text-sm py-2'}`}
                   style={{
-                    background: 'linear-gradient(135deg, var(--accent, #3498db), var(--accent-dark, #2980b9))',
-                    boxShadow: '0 2px 10px var(--accent-glow, rgba(52,152,219,0.3))',
+                    background: lanIsClassic
+                      ? 'linear-gradient(135deg, #3498db, #2980b9)'
+                      : 'linear-gradient(135deg, var(--accent, #3498db), var(--accent-dark, #2980b9))',
+                    boxShadow: lanIsClassic
+                      ? '0 2px 10px rgba(52,152,219,0.3)'
+                      : '0 2px 10px var(--accent-glow, rgba(52,152,219,0.3))',
+                    color: '#fff',
+                    opacity: joinRoomCode.length < 3 ? 0.5 : 1,
                   }}
                   onClick={handleJoin}
                   disabled={joinRoomCode.length < 3}
