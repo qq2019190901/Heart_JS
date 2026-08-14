@@ -12,7 +12,6 @@ interface TableProps {
   aiCardMinPx: number;
   cardW: number;
   cardH: number;
-  tablePad: number;
   aiHandOffset: number;
   trickOverlapBase: number;
   trickOverlapStep: number;
@@ -29,7 +28,7 @@ interface TableProps {
 
 const Table: React.FC<TableProps> = memo(({
   trick, currentPlayerId, humanPlayerId, players, aiHands = new Map(),
-  aiCardMinPx, cardW, cardH, tablePad, aiHandOffset,
+  aiCardMinPx, cardW, cardH, aiHandOffset,
   trickOverlapBase, trickOverlapStep, badgeOff, badgeFontSizePx, scoreFontSizePx,
   fanStepX, fanStepY, trickCardMinPx,
   turnStatus,

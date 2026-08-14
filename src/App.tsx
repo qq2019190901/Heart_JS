@@ -418,7 +418,6 @@ function App() {
       trickCardMinPx,
       cardW: _cardW,
       cardH: _cardH,
-      tablePad: Math.round(2 + tableT * 4),
       // Minimum 40px to clear rounded corners (~44px radius on this device)
       aiHandOffset: Math.max(16, Math.round(8 + tableT * 52)),
       trickOverlapBase: Math.round(12 + tableT * 24),
@@ -826,8 +825,6 @@ function App() {
     });
   };
 
-  const selectedPassArr = humanHand.filter(c => selectedPassCardIds.has(c.id));
-
   // Settlement: human player's scoring cards
   const isSettlement = roundOver || gameOver;
   const settlementCards = isSettlement ? gameState!.trickCardsWon : undefined;
@@ -982,13 +979,9 @@ function App() {
               <button
                 onClick={handlePassConfirm}
                 disabled={selectedPassCardIds.size !== maxPass}
-                className={`font-bold rounded transition-colors ${
-                  resp.minDim < 450 ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1 text-xs'
-                } ${
-                  selectedPassCardIds.size === maxPass
-                    ? ''
-                    : ''
-                }`}
+                  className={`font-bold rounded transition-colors ${
+                    resp.minDim < 450 ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1 text-xs'
+                  } ${selectedPassCardIds.size === maxPass ? '' : 'opacity-50 cursor-not-allowed'}`}
               >
                 确认 ✓
               </button>
@@ -1005,7 +998,7 @@ function App() {
       </div>
 
       {/* Bottom: human hand — offset from bottom edge to clear corner curves */}
-      <div className="shrink-0 flex flex-col items-center w-full pb-1 sm:pb-3 pt-2 px-0.5 sm:px-4 relative z-10" style={{ paddingBottom: '20px', marginTop: '8px' }}>
+      <div className="shrink-0 flex flex-col items-center w-full pt-2 px-0.5 sm:px-4 relative z-10" style={{ paddingBottom: '20px', marginTop: '8px' }}>
 
         {isPassingPhase ? (
           /* ── Passing Phase UI ── */
