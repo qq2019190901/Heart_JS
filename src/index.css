@@ -1,12 +1,10 @@
 @import "tailwindcss";
 
 /* ═══════════════════════════════════════
-   Theme System
-   classic = traditional green felt
-   modern  = dark sleek like the new menu
+   Theme System — default is classic
+   Modern theme variables are set via JS
    ═══════════════════════════════════════ */
-:root,
-[data-theme="classic"] {
+:root {
   /* Backgrounds */
   --bg-start: #0d5e28;
   --bg-end: #094a20;
@@ -60,11 +58,14 @@
   /* Menu dropdown */
   --menu-bg: #ffffff;
   --menu-text: #374151;
+  --menu-text-primary: #374151;
+  --menu-text-secondary: #6b7280;
+  --menu-text-muted: #9ca3af;
   --menu-border: #e5e7eb;
   --menu-hover: #f3f4f6;
 }
 
-[data-theme="modern"] {
+.theme-modern {
   /* Backgrounds — dark like new menu */
   --bg-start: #0a0a0f;
   --bg-end: #12121c;
@@ -118,6 +119,9 @@
   /* Menu dropdown — dark version */
   --menu-bg: #1a1a2e;
   --menu-text: #e2e8f0;
+  --menu-text-primary: #e2e8f0;
+  --menu-text-secondary: rgba(255, 255, 255, 0.6);
+  --menu-text-muted: rgba(255, 255, 255, 0.4);
   --menu-border: rgba(255, 255, 255, 0.1);
   --menu-hover: rgba(255, 255, 255, 0.06);
 }

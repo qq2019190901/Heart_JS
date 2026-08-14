@@ -82,7 +82,7 @@ function App() {
 
   // Apply theme to document
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.className = `theme-${theme}`;
     localStorage.setItem('heart-theme', theme);
   }, [theme]);
 
@@ -859,12 +859,12 @@ function App() {
             >
               {/* AI Difficulty Section */}
               <div className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider"
-                style={{ color: 'var(--text-muted, #9ca3af)' }}>AI 难度</div>
+                style={{ color: 'var(--menu-text-muted, #9ca3af)' }}>AI 难度</div>
               {(['ai-0', 'ai-1', 'ai-2'] as const).map((aiId, idx) => {
                 const aiNames = ['AI 左', 'AI 上', 'AI 右'];
                 return (
                   <div key={aiId} className="px-3 py-1">
-                    <div className="text-xs mb-0.5" style={{ color: 'var(--text-secondary, #6b7280)' }}>{aiNames[idx]}</div>
+                    <div className="text-xs mb-0.5" style={{ color: 'var(--menu-text-secondary, #6b7280)' }}>{aiNames[idx]}</div>
                     <div className="flex gap-1">
                       {(['easy', 'medium', 'hard'] as const).map((diff) => {
                         const labels = { easy: '简单', medium: '中等', hard: '困难' };
@@ -883,7 +883,7 @@ function App() {
                             }`}
                             style={{
                               background: isActive ? 'var(--accent, #2ecc71)' : 'var(--menu-hover, #f3f4f6)',
-                              color: isActive ? '#fff' : 'var(--text-secondary, #6b7280)',
+                              color: isActive ? '#fff' : 'var(--menu-text-secondary, #6b7280)',
                             }}
                           >
                             {labels[diff]}
@@ -897,7 +897,7 @@ function App() {
               <div className="my-1.5" style={{ borderTop: '1px solid var(--menu-border, #e5e7eb)' }} />
               {/* Theme Section */}
               <div className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider"
-                style={{ color: 'var(--text-muted, #9ca3af)' }}>风格</div>
+                style={{ color: 'var(--menu-text-muted, #9ca3af)' }}>风格</div>
               <div className="grid grid-cols-2 gap-1.5 px-3 pb-2">
                 {([
                   ['classic', '🟢 经典'],
@@ -909,7 +909,7 @@ function App() {
                     className="text-xs px-2 py-1.5 rounded-md transition-all font-medium"
                     style={{
                       background: theme === key ? 'var(--accent, #2ecc71)' : 'var(--menu-hover, rgba(0,0,0,0.05))',
-                      color: theme === key ? '#fff' : 'var(--text-secondary, #6b7280)',
+                      color: theme === key ? '#fff' : 'var(--menu-text-secondary, #6b7280)',
                       border: theme === key ? '1px solid var(--accent, #2ecc71)' : '1px solid var(--menu-border, rgba(0,0,0,0.1))',
                     }}
                   >
@@ -921,7 +921,7 @@ function App() {
               {/* Home Button */}
               <button
                 className="w-full text-left px-3 py-1.5 text-sm transition-colors"
-                style={{ color: 'var(--text-primary, #374151)' }}
+                style={{ color: 'var(--menu-text-primary, #374151)' }}
                 onClick={(e) => {
                   e.stopPropagation();
                   setMode(null);
