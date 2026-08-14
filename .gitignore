@@ -36,3 +36,4 @@ main.js
 tsconfig.electron.tsbuildinfo
 *.jar
 *.png
+heart-js-keystore.keystore
