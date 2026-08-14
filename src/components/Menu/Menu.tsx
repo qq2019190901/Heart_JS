@@ -6,6 +6,8 @@ interface MenuProps {
   onStartSingle: () => void;
   onStartLanHost: (roomId: string) => void;
   onStartLanJoin: (roomCode: string) => void;
+  theme?: 'classic' | 'modern';
+  onThemeChange?: (theme: 'classic' | 'modern') => void;
 }
 
 const Menu: React.FC<MenuProps> = memo(({
@@ -80,22 +82,22 @@ const Menu: React.FC<MenuProps> = memo(({
   return (
     <div className="min-h-screen min-h-dvh flex flex-col items-center justify-center relative overflow-hidden"
       style={{
-        background: 'linear-gradient(160deg, #0a0a0f 0%, #12121c 40%, #1a1a2e 100%)',
+        background: 'var(--menu-screen-bg, linear-gradient(160deg, #0a0a0f 0%, #12121c 40%, #1a1a2e 100%))',
       }}>
       {/* Ambient glow */}
       <div className="absolute top-[10%] left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full pointer-events-none select-none"
         style={{
-          background: 'radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%)',
+          background: `radial-gradient(circle, var(--menu-glow-1, rgba(139,92,246,0.08)) 0%, transparent 70%)`,
         }}
       />
       <div className="absolute bottom-[10%] left-0 w-[300px] h-[300px] rounded-full pointer-events-none select-none"
         style={{
-          background: 'radial-gradient(circle, rgba(239,68,68,0.06) 0%, transparent 70%)',
+          background: `radial-gradient(circle, var(--menu-glow-2, rgba(239,68,68,0.06)) 0%, transparent 70%)`,
         }}
       />
       <div className="absolute bottom-[5%] right-0 w-[250px] h-[250px] rounded-full pointer-events-none select-none"
         style={{
-          background: 'radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%)',
+          background: `radial-gradient(circle, var(--menu-glow-3, rgba(59,130,246,0.06)) 0%, transparent 70%)`,
         }}
       />
 
@@ -149,8 +151,8 @@ const Menu: React.FC<MenuProps> = memo(({
           </motion.div>
         </div>
         <h1 className={titleSize} style={{
-          textShadow: '0 0 40px rgba(139,92,246,0.3), 0 2px 10px rgba(0,0,0,0.8)',
-          background: 'linear-gradient(135deg, #fff 0%, #c4b5fd 50%, #f9a8d4 100%)',
+          textShadow: '0 0 40px var(--menu-glow-1, rgba(139,92,246,0.3)), 0 2px 10px rgba(0,0,0,0.8)',
+          background: 'var(--menu-title-grad, linear-gradient(135deg, #fff 0%, #c4b5fd 50%, #f9a8d4 100%))',
           WebkitBackgroundClip: 'text',
           WebkitTextFillColor: 'transparent',
         }}>
@@ -185,14 +187,33 @@ const Menu: React.FC<MenuProps> = memo(({
         />
       </div>
 
+      {/* Theme toggle button — always visible */}
+      <motion.button
+        className="mb-4 z-10 flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-all"
+        style={{
+          background: 'var(--menu-btn-bg, rgba(255,255,255,0.08))',
+          border: '1px solid var(--menu-btn-border, rgba(139,92,246,0.4))',
+          color: 'var(--menu-text-muted, rgba(255,255,255,0.5))',
+          backdropFilter: 'blur(10px)',
+        }}
+        onClick={() => onThemeChange?.(theme === 'classic' ? 'modern' : 'classic')}
+        whileTap={{ scale: 0.97 }}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5, duration: 0.5 }}
+      >
+        <span>{theme === 'classic' ? '🌙' : '🟢'}</span>
+        <span>{theme === 'classic' ? '切换到现代暗色' : '切换到经典绿毡'}</span>
+      </motion.button>
+
       {/* LAN Panel */}
       {showLanPanel && (
         <motion.div
           className={`z-20 mt-3 sm:mt-4 ${lanPanelWidth} rounded-xl p-3 sm:p-4`}
           style={{
-            background: 'linear-gradient(135deg, rgba(18,18,30,0.9) 0%, rgba(26,26,46,0.9) 100%)',
+            background: 'var(--menu-panel-bg, linear-gradient(135deg, rgba(18,18,30,0.9) 0%, rgba(26,26,46,0.9) 100%))',
             backdropFilter: 'blur(12px)',
-            border: '1px solid rgba(139,92,246,0.2)',
+            border: '1px solid var(--menu-panel-border, rgba(139,92,246,0.2))',
             boxShadow: '0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
           }}
           initial={{ opacity: 0, y: 10, scale: 0.97 }}
@@ -212,9 +233,9 @@ const Menu: React.FC<MenuProps> = memo(({
                   className={`flex-1 rounded-lg text-xs font-medium transition-all ${isPhone ? 'py-1.5' : 'py-2'}`}
                   style={{
                     background: serverMode === mode
-                      ? 'linear-gradient(135deg, #2ecc71, #27ae60)'
-                      : 'rgba(255,255,255,0.1)',
-                    color: serverMode === mode ? 'white' : 'rgba(255,255,255,0.5)',
+                      ? 'linear-gradient(135deg, var(--accent, #2ecc71), var(--accent-dark, #27ae60))'
+                      : 'var(--menu-input-bg, rgba(255,255,255,0.1))',
+                    color: serverMode === mode ? '#fff' : 'var(--menu-text-muted, rgba(255,255,255,0.5))',
                   }}
                 >
                   {mode === 'embedded' ? '我来当房主' : '加入别人房间'}
@@ -238,8 +259,8 @@ const Menu: React.FC<MenuProps> = memo(({
                   placeholder="IP 地址"
                   className={`flex-1 rounded-lg text-white font-mono ${inputSize}`}
                   style={{
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.12)',
+                    background: 'var(--menu-input-bg, rgba(255,255,255,0.06))',
+                    border: '1px solid var(--menu-input-border, rgba(255,255,255,0.12))',
                     outline: 'none',
                   }}
                 />
@@ -250,8 +271,8 @@ const Menu: React.FC<MenuProps> = memo(({
                   placeholder="端口"
                   className={`w-16 sm:w-20 rounded-lg text-white font-mono ${inputSize}`}
                   style={{
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.12)',
+                    background: 'var(--menu-input-bg, rgba(255,255,255,0.06))',
+                    border: '1px solid var(--menu-input-border, rgba(255,255,255,0.12))',
                     outline: 'none',
                   }}
                 />
@@ -271,8 +292,8 @@ const Menu: React.FC<MenuProps> = memo(({
                   placeholder="房间号（留空自动生成）"
                   className={`flex-1 rounded-lg text-white tracking-widest font-mono ${inputSize}`}
                   style={{
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.12)',
+                    background: 'var(--menu-input-bg, rgba(255,255,255,0.06))',
+                    border: '1px solid var(--menu-input-border, rgba(255,255,255,0.12))',
                     outline: 'none',
                   }}
                   maxLength={12}
@@ -280,8 +301,8 @@ const Menu: React.FC<MenuProps> = memo(({
                 <button
                   className={`px-3 sm:px-4 rounded-lg text-white font-semibold transition-all ${isPhone ? 'text-xs py-1.5' : 'text-sm py-2'}`}
                   style={{
-                    background: 'linear-gradient(135deg, #2ecc71, #27ae60)',
-                    boxShadow: '0 2px 10px rgba(46,204,113,0.3)',
+                    background: 'linear-gradient(135deg, var(--accent, #2ecc71), var(--accent-dark, #27ae60))',
+                    boxShadow: '0 2px 10px var(--accent-glow, rgba(46,204,113,0.3))',
                   }}
                   onClick={handleCreate}
                 >
@@ -303,8 +324,8 @@ const Menu: React.FC<MenuProps> = memo(({
                   placeholder="房间号"
                   className={`flex-1 rounded-lg text-white tracking-widest font-mono ${inputSize}`}
                   style={{
-                    background: 'rgba(255,255,255,0.06)',
-                    border: '1px solid rgba(255,255,255,0.12)',
+                    background: 'var(--menu-input-bg, rgba(255,255,255,0.06))',
+                    border: '1px solid var(--menu-input-border, rgba(255,255,255,0.12))',
                     outline: 'none',
                   }}
                   maxLength={12}
@@ -312,8 +333,8 @@ const Menu: React.FC<MenuProps> = memo(({
                 <button
                   className={`px-3 sm:px-4 rounded-lg text-white font-semibold transition-all ${isPhone ? 'text-xs py-1.5' : 'text-sm py-2'}`}
                   style={{
-                    background: 'linear-gradient(135deg, #3498db, #2980b9)',
-                    boxShadow: '0 2px 10px rgba(52,152,219,0.3)',
+                    background: 'linear-gradient(135deg, var(--accent, #3498db), var(--accent-dark, #2980b9))',
+                    boxShadow: '0 2px 10px var(--accent-glow, rgba(52,152,219,0.3))',
                   }}
                   onClick={handleJoin}
                   disabled={joinRoomCode.length < 3}
@@ -354,8 +375,12 @@ const Menu: React.FC<MenuProps> = memo(({
 
       {menuOpen && (
         <motion.div
-          className={`mt-2 sm:mt-3 mx-3 sm:mx-4 p-3 sm:p-4 rounded-xl max-w-sm z-10 ${isPhone ? 'text-[9px]' : isTablet ? 'text-xs' : 'text-xs sm:text-sm'} leading-relaxed text-white/70`}
-          style={{ background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(10px)' }}
+          className={`mt-2 sm:mt-3 mx-3 sm:mx-4 p-3 sm:p-4 rounded-xl max-w-sm z-10 ${isPhone ? 'text-[9px]' : isTablet ? 'text-xs' : 'text-xs sm:text-sm'} leading-relaxed`}
+          style={{
+            background: 'var(--menu-panel-bg, rgba(0,0,0,0.3))',
+            backdropFilter: 'blur(10px)',
+            color: 'var(--menu-text-primary, rgba(255,255,255,0.7))',
+          }}
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
@@ -390,20 +415,20 @@ interface MenuButtonProps {
 }
 
 const accentBorders: Record<string, string> = {
-  violet: 'rgba(139,92,246,0.4)',
-  blue: 'rgba(59,130,246,0.4)',
+  violet: 'var(--menu-btn-border, rgba(139,92,246,0.4))',
+  blue: 'var(--menu-btn-border, rgba(59,130,246,0.4))',
 };
 const accentShadows: Record<string, string> = {
-  violet: 'rgba(139,92,246,0.25)',
-  blue: 'rgba(59,130,246,0.25)',
+  violet: 'var(--accent-glow, rgba(139,92,246,0.25))',
+  blue: 'var(--accent-glow, rgba(59,130,246,0.25))',
 };
 
 const MenuButton: React.FC<MenuButtonProps> = memo(({ label, sub, icon, onClick, delay, btnSize, subSize, accent = 'violet' }) => (
   <motion.button
     className={`w-full px-4 sm:px-6 rounded-xl text-white font-semibold tracking-wide transition-all flex items-center gap-3 ${btnSize}`}
     style={{
-      background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)',
-      border: `1px solid ${accentBorders[accent]}`,
+      background: 'var(--menu-btn-bg, linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%))',
+      border: `1px solid var(--menu-btn-border, ${accentBorders[accent]})`,
       backdropFilter: 'blur(10px)',
       boxShadow: `0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)`,
     }}
@@ -413,8 +438,8 @@ const MenuButton: React.FC<MenuButtonProps> = memo(({ label, sub, icon, onClick,
     transition={{ delay, duration: 0.5 }}
     whileHover={{
       scale: 1.02,
-      background: 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.05) 100%)',
-      boxShadow: `0 6px 25px rgba(0,0,0,0.4), 0 0 20px ${accentShadows[accent]}`,
+      background: 'var(--menu-btn-hover-bg, linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.05) 100%))',
+      boxShadow: `0 6px 25px rgba(0,0,0,0.4), 0 0 20px var(--accent-glow, ${accentShadows[accent]})`,
     }}
     whileTap={{ scale: 0.97 }}
   >

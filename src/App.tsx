@@ -741,7 +741,8 @@ function App() {
         onStartSingle={startSingle}
         onStartLanHost={handleLanCreateRoom}
         onStartLanJoin={handleLanJoinRoom}
-
+        theme={theme}
+        onThemeChange={setTheme}
       />
     );
   }
@@ -761,6 +762,7 @@ function App() {
         status={lanStatus}
         errorMessage={lanErrorMessage}
         serverHost={lanPeer.serverConfig.host}
+        theme={theme}
       />
     );
   }

@@ -63,6 +63,20 @@
   --menu-text-muted: #9ca3af;
   --menu-border: #e5e7eb;
   --menu-hover: #f3f4f6;
+
+  /* Menu screen background */
+  --menu-screen-bg: linear-gradient(160deg, #0d5e28 0%, #1a8a4a 50%, #094a20 100%);
+  --menu-glow-1: rgba(46, 204, 113, 0.08);
+  --menu-glow-2: rgba(239, 68, 68, 0.06);
+  --menu-glow-3: rgba(59, 130, 246, 0.06);
+  --menu-title-grad: linear-gradient(135deg, #fff 0%, #2ecc71 50%, #fbbf24 100%);
+  --menu-btn-bg: linear-gradient(135deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.08) 100%);
+  --menu-btn-border: rgba(255,255,255,0.4);
+  --menu-btn-hover-bg: linear-gradient(135deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.12) 100%);
+  --menu-panel-bg: linear-gradient(135deg, rgba(255,255,255,0.97) 0%, rgba(255,255,255,0.92) 100%);
+  --menu-panel-border: rgba(0, 0, 0, 0.12);
+  --menu-input-bg: rgba(0, 0, 0, 0.06);
+  --menu-input-border: rgba(0, 0, 0, 0.18);
 }
 
 .theme-modern {
@@ -124,6 +138,20 @@
   --menu-text-muted: rgba(255, 255, 255, 0.4);
   --menu-border: rgba(255, 255, 255, 0.1);
   --menu-hover: rgba(255, 255, 255, 0.06);
+
+  /* Menu screen background */
+  --menu-screen-bg: linear-gradient(160deg, #0a0a0f 0%, #12121c 40%, #1a1a2e 100%);
+  --menu-glow-1: rgba(139, 92, 246, 0.08);
+  --menu-glow-2: rgba(239, 68, 68, 0.06);
+  --menu-glow-3: rgba(59, 130, 246, 0.06);
+  --menu-title-grad: linear-gradient(135deg, #fff 0%, #c4b5fd 50%, #f9a8d4 100%);
+  --menu-btn-bg: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%);
+  --menu-btn-border: rgba(139, 92, 246, 0.4);
+  --menu-btn-hover-bg: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.05) 100%);
+  --menu-panel-bg: linear-gradient(135deg, rgba(18,18,30,0.95) 0%, rgba(26,26,46,0.95) 100%);
+  --menu-panel-border: rgba(139, 92, 246, 0.2);
+  --menu-input-bg: rgba(255, 255, 255, 0.06);
+  --menu-input-border: rgba(255, 255, 255, 0.12);
 }
 
 html, body, #root {
