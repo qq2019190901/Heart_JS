@@ -50,6 +50,20 @@ function getDistIndexPath(): string {
   throw new Error('Cannot find index.html at any candidate path');
 }
 
+function getPreloadPath(): string {
+  // preload.js is asarUnpack'd alongside dist/ in packaged mode
+  const candidates = [
+    path.join(process.resourcesPath, 'app.asar.unpacked', 'dist-electron', 'preload.js'),
+    path.join(process.resourcesPath, 'dist-electron', 'preload.js'),
+    path.join(__dirname, 'preload.js'),
+    path.join(__dirname, '..', 'dist-electron', 'preload.js'),
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return p;
+  }
+  throw new Error('Cannot find preload.js at any candidate path');
+}
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 480,
@@ -61,7 +75,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
-      preload: path.join(__dirname, 'preload.js'),
+      preload: getPreloadPath(),
     },
   });
 

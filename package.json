@@ -31,6 +31,7 @@
     "asar": true,
     "asarUnpack": [
       "dist/**/*",
+      "dist-electron/preload.js",
       "server.cjs"
     ],
     "extraFiles": [
