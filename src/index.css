@@ -6,7 +6,7 @@
    modern  = dark sleek like the new menu
    ═══════════════════════════════════════ */
 :root,
-[data-theme-classic] {
+[data-theme="classic"] {
   /* Backgrounds */
   --bg-start: #0d5e28;
   --bg-end: #094a20;
@@ -64,7 +64,7 @@
   --menu-hover: #f3f4f6;
 }
 
-[data-theme-modern] {
+[data-theme="modern"] {
   /* Backgrounds — dark like new menu */
   --bg-start: #0a0a0f;
   --bg-end: #12121c;
