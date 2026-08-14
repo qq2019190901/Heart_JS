@@ -14,6 +14,8 @@ const Menu: React.FC<MenuProps> = memo(({
   onStartSingle,
   onStartLanHost,
   onStartLanJoin,
+  theme = 'classic',
+  onThemeChange,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showLanPanel, setShowLanPanel] = useState(false);
@@ -82,7 +84,9 @@ const Menu: React.FC<MenuProps> = memo(({
   return (
     <div className="min-h-screen min-h-dvh flex flex-col items-center justify-center relative overflow-hidden"
       style={{
-        background: 'var(--menu-screen-bg, linear-gradient(160deg, #0a0a0f 0%, #12121c 40%, #1a1a2e 100%))',
+        background: theme === 'modern'
+          ? 'linear-gradient(160deg, #0a0a0f 0%, #12121c 40%, #1a1a2e 100%)'
+          : 'linear-gradient(160deg, #0d5e28 0%, #1a8a4a 50%, #094a20 100%)',
       }}>
       {/* Ambient glow */}
       <div className="absolute top-[10%] left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full pointer-events-none select-none"
@@ -158,7 +162,8 @@ const Menu: React.FC<MenuProps> = memo(({
         }}>
           红心大战
         </h1>
-        <p className={`${subtitleSize} text-white/30 tracking-[0.3em] mt-1.5 uppercase`}>
+        <p className={`${subtitleSize} tracking-[0.3em] mt-1.5 uppercase`}
+          style={{ color: theme === 'modern' ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.6)' }}>
           HEARTS · CARD GAME
         </p>
       </motion.div>
