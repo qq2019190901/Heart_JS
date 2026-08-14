@@ -42,7 +42,7 @@ function App() {
     }
   });
   const [showDropdown, setShowDropdown] = useState(false);
-  const [theme, setTheme] = useState<'classic' | 'ocean' | 'royal' | 'midnight' | 'crimson' | 'gold'>(() => {
+  const [theme, setTheme] = useState<'classic' | 'modern'>(() => {
     try { return localStorage.getItem('heart-theme') as any || 'classic'; } catch { return 'classic'; }
   });
 
@@ -849,16 +849,22 @@ function App() {
           </button>
           {showDropdown && (
             <div
-              className="absolute top-full left-0 mt-1 bg-white rounded-xl shadow-xl py-2 z-50 min-w-[180px]"
+              className="absolute top-full left-0 mt-1 rounded-xl shadow-menu py-2 z-50 min-w-[180px] overflow-hidden"
+              style={{
+                background: 'var(--menu-bg, #fff)',
+                boxShadow: 'var(--shadow-menu, 0 4px 20px rgba(0,0,0,0.2))',
+                border: '1px solid var(--menu-border, rgba(255,255,255,0.1))',
+              }}
               onClick={(e) => e.stopPropagation()}
             >
               {/* AI Difficulty Section */}
-              <div className="px-3 py-1.5 text-xs font-bold text-gray-400 uppercase tracking-wider">AI 难度</div>
+              <div className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider"
+                style={{ color: 'var(--text-muted, #9ca3af)' }}>AI 难度</div>
               {(['ai-0', 'ai-1', 'ai-2'] as const).map((aiId, idx) => {
                 const aiNames = ['AI 左', 'AI 上', 'AI 右'];
                 return (
                   <div key={aiId} className="px-3 py-1">
-                    <div className="text-xs text-gray-500 mb-0.5">{aiNames[idx]}</div>
+                    <div className="text-xs mb-0.5" style={{ color: 'var(--text-secondary, #6b7280)' }}>{aiNames[idx]}</div>
                     <div className="flex gap-1">
                       {(['easy', 'medium', 'hard'] as const).map((diff) => {
                         const labels = { easy: '简单', medium: '中等', hard: '困难' };
@@ -866,14 +872,18 @@ function App() {
                         return (
                           <button
                             key={diff}
-                            className={`flex-1 text-xs px-2 py-1 rounded-md transition-colors ${
-                              isActive
-                                ? 'bg-blue-500 text-white'
-                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                            }`}
                             onClick={(e) => {
                               e.stopPropagation();
                               setAiDifficulties(prev => ({ ...prev, [aiId]: diff }));
+                            }}
+                            className={`flex-1 text-xs px-2 py-1 rounded-md transition-colors ${
+                              isActive
+                                ? 'text-white'
+                                : ''
+                            }`}
+                            style={{
+                              background: isActive ? 'var(--accent, #2ecc71)' : 'var(--menu-hover, #f3f4f6)',
+                              color: isActive ? '#fff' : 'var(--text-secondary, #6b7280)',
                             }}
                           >
                             {labels[diff]}
@@ -884,35 +894,34 @@ function App() {
                   </div>
                 );
               })}
-              <div className="border-t my-1.5" />
+              <div className="my-1.5" style={{ borderTop: '1px solid var(--menu-border, #e5e7eb)' }} />
               {/* Theme Section */}
-              <div className="px-3 py-1.5 text-xs font-bold text-gray-400 uppercase tracking-wider">主题</div>
-              <div className="grid grid-cols-3 gap-1.5 px-3 pb-2">
+              <div className="px-3 py-1.5 text-xs font-bold uppercase tracking-wider"
+                style={{ color: 'var(--text-muted, #9ca3af)' }}>风格</div>
+              <div className="grid grid-cols-2 gap-1.5 px-3 pb-2">
                 {([
-                  ['classic', '🟢 经典绿'],
-                  ['ocean', '🔵 海洋蓝'],
-                  ['royal', '🟣 皇家紫'],
-                  ['midnight', '⚫ 午夜黑'],
-                  ['crimson', '🔴 深红'],
-                  ['gold', '🟡 金辉'],
+                  ['classic', '🟢 经典'],
+                  ['modern', '🌙 现代暗色'],
                 ] as const).map(([key, label]) => (
                   <button
                     key={key}
                     onClick={(e) => { e.stopPropagation(); setTheme(key); setShowDropdown(false); }}
-                    className={`text-xs px-2 py-1.5 rounded-md transition-all border ${
-                      theme === key
-                        ? 'border-blue-500 bg-blue-500 text-white'
-                        : 'border-gray-200 text-gray-600 hover:bg-gray-100'
-                    }`}
+                    className="text-xs px-2 py-1.5 rounded-md transition-all font-medium"
+                    style={{
+                      background: theme === key ? 'var(--accent, #2ecc71)' : 'var(--menu-hover, rgba(0,0,0,0.05))',
+                      color: theme === key ? '#fff' : 'var(--text-secondary, #6b7280)',
+                      border: theme === key ? '1px solid var(--accent, #2ecc71)' : '1px solid var(--menu-border, rgba(0,0,0,0.1))',
+                    }}
                   >
                     {label}
                   </button>
                 ))}
               </div>
-              <div className="border-t my-1.5" />
+              <div className="my-1.5" style={{ borderTop: '1px solid var(--menu-border, #e5e7eb)' }} />
               {/* Home Button */}
               <button
-                className="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                className="w-full text-left px-3 py-1.5 text-sm transition-colors"
+                style={{ color: 'var(--text-primary, #374151)' }}
                 onClick={(e) => {
                   e.stopPropagation();
                   setMode(null);
@@ -975,8 +984,8 @@ function App() {
                   resp.minDim < 450 ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1 text-xs'
                 } ${
                   selectedPassCardIds.size === maxPass
-                    ? 'bg-yellow-500 hover:bg-yellow-400 text-gray-900'
-                    : 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                    ? ''
+                    : ''
                 }`}
               >
                 确认 ✓
@@ -1150,8 +1159,8 @@ function App() {
             <div
               className="relative z-10 rounded-2xl w-full max-w-sm sm:max-w-md"
               style={{
-                background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
-                boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+                background: 'var(--bg-dark, #1a1a2e)',
+                boxShadow: 'var(--shadow-table, 0 20px 60px rgba(0,0,0,0.5))',
               }}
               role="dialog"
               aria-label={isGameOver ? '游戏结束' : `第 ${gameState!.roundNumber} 回合结束`}
@@ -1167,8 +1176,8 @@ function App() {
                     key={player.id}
                     className="rounded-lg p-1.5 sm:p-2"
                     style={{
-                      background: idx === 0 ? 'rgba(46,204,113,0.2)' : 'rgba(255,255,255,0.05)',
-                      border: idx === 0 ? '1px solid rgba(46,204,113,0.3)' : '1px solid rgba(255,255,255,0.1)',
+                      background: idx === 0 ? 'var(--score-win-bg, rgba(46,204,113,0.15))' : 'rgba(255,255,255,0.05)',
+                      border: idx === 0 ? '1px solid var(--score-win-border, rgba(46,204,113,0.4))' : '1px solid rgba(255,255,255,0.1)',
                     }}
                   >
                     <div className="flex items-center gap-1 sm:gap-2">
@@ -1197,7 +1206,7 @@ function App() {
                 {isGameOver ? (
                   <button
                     className="flex-1 rounded-xl font-semibold text-white py-2 sm:py-2.5 text-xs sm:text-sm"
-                    style={{ background: 'linear-gradient(135deg, #2ecc71, #27ae60)' }}
+                    style={{ background: 'linear-gradient(135deg, var(--accent, #2ecc71), var(--accent-dark, #27ae60))' }}
                     onClick={handleRestart}
                   >
                     重新开始

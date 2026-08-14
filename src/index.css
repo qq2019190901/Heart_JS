@@ -1,79 +1,132 @@
 @import "tailwindcss";
 
-:root {
-  font-family: 'PingFang SC', 'Microsoft YaHei', system-ui, -apple-system, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
-
-  /* ═══════════════════════════════════════
-     Design Tokens — Theme Colors
-     Default: classic green felt
-     ═══════════════════════════════════════ */
-  --felt-dark: #094a20;
-  --felt-mid: #0d6e38;
-  --felt-light: #1a8a4a;
-  --felt-glow: rgba(46, 204, 113, 0.15);
-  --felt-border: rgba(139, 105, 20, 0.6);
-
+/* ═══════════════════════════════════════
+   Theme System
+   classic = traditional green felt
+   modern  = dark sleek like the new menu
+   ═══════════════════════════════════════ */
+:root,
+[data-theme-classic] {
+  /* Backgrounds */
   --bg-start: #0d5e28;
   --bg-end: #094a20;
+  --bg-dark: #094a20;
+
+  /* Table felt */
+  --felt-light: #1a8a4a;
+  --felt-mid: #0d6e38;
+  --felt-dark: #094a20;
+  --felt-border: rgba(139, 105, 20, 0.7);
+  --felt-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+
+  /* Accents */
   --accent: #2ecc71;
   --accent-dark: #27ae60;
-  --accent-glow: rgba(46, 204, 113, 0.3);
+  --accent-glow: rgba(46, 204, 113, 0.35);
+  --amber: #fbbf24;
+  --amber-soft: rgba(251, 191, 36, 0.15);
 
-  --score-win: rgba(46, 204, 113, 0.2);
-  --score-win-border: rgba(46, 204, 113, 0.3);
+  /* Badges */
+  --badge-active: #fbbf24;
+  --badge-active-text: #1a1a00;
+  --badge-human: #3b82f6;
+  --badge-other: rgba(0, 0, 0, 0.5);
+  --badge-text: rgba(255, 255, 255, 0.85);
+  --badge-score-bg: rgba(0, 0, 0, 0.4);
+
+  /* Score */
+  --score-win-bg: rgba(46, 204, 113, 0.15);
+  --score-win-border: rgba(46, 204, 113, 0.4);
   --score-win-text: #2ecc71;
-  --score-card: rgba(46, 204, 113, 0.4);
+  --score-card: rgba(46, 204, 113, 0.35);
 
-  --border-amber: #8b6914;
-  --border-amber-alpha: rgba(139, 105, 20, 0.6);
-  --card-face-top: #1a5276;
-  --card-face-mid: #2e86c1;
-  --badge-amber: rgba(251, 191, 36, 0.9);
-  --badge-amber-shadow: rgba(251, 191, 36, 0.3);
-  --badge-blue: rgba(59, 130, 246, 0.8);
-  --badge-black-alpha: rgba(0, 0, 0, 0.4);
-  --score-tag: rgba(0, 0, 0, 0.4);
-  --score-text: rgba(255, 255, 255, 0.6);
+  /* Cards */
+  --card-back-top: #1a5276;
+  --card-back-mid: #2e86c1;
 
-  /* ═══════════════════════════════════════
-     Design Tokens — Spacing Scale
-     ═══════════════════════════════════════ */
-  --space-xs: 4px;
-  --space-sm: 8px;
-  --space-md: 12px;
-  --space-lg: 16px;
-  --space-xl: 24px;
-  --space-2xl: 32px;
+  /* Shadows */
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow-card-hover: 0 6px 20px rgba(0, 0, 0, 0.35);
+  --shadow-card-selected: 0 8px 25px rgba(46, 204, 113, 0.45);
+  --shadow-badge: 0 4px 12px rgba(0, 0, 0, 0.2);
+  --shadow-table: 0 20px 60px rgba(0, 0, 0, 0.5);
+  --shadow-menu: 0 4px 20px rgba(0, 0, 0, 0.3);
 
-  /* ═══════════════════════════════════════
-     Design Tokens — Border Radius
-     ═══════════════════════════════════════ */
-  --radius-card: 8px;
-  --radius-badge: 9999px;
-  --radius-modal: 16px;
+  /* Text */
+  --text-primary: #f0f0e8;
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --text-muted: rgba(255, 255, 255, 0.4);
 
-  /* ═══════════════════════════════════════
-     Design Tokens — Shadows
-     ═══════════════════════════════════════ */
-  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.2);
-  --shadow-card-hover: 0 6px 20px rgba(0, 0, 0, 0.3);
-  --shadow-card-selected: 0 8px 25px var(--accent-glow);
-  --shadow-badge: 0 4px 12px rgba(0, 0, 0, 0.15);
-  --shadow-table: 0 20px 60px rgba(0, 0, 0, 0.4);
+  /* Menu dropdown */
+  --menu-bg: #ffffff;
+  --menu-text: #374151;
+  --menu-border: #e5e7eb;
+  --menu-hover: #f3f4f6;
+}
+
+[data-theme-modern] {
+  /* Backgrounds — dark like new menu */
+  --bg-start: #0a0a0f;
+  --bg-end: #12121c;
+  --bg-dark: #1a1a2e;
+
+  /* Table — dark sleek felt */
+  --felt-light: #1e2a3a;
+  --felt-mid: #162028;
+  --felt-dark: #0f1720;
+  --felt-border: rgba(100, 120, 160, 0.25);
+  --felt-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+
+  /* Accents — purple/blue */
+  --accent: #8b5cf6;
+  --accent-dark: #7c3aed;
+  --accent-glow: rgba(139, 92, 246, 0.35);
+  --amber: #fbbf24;
+  --amber-soft: rgba(251, 191, 36, 0.1);
+
+  /* Badges */
+  --badge-active: #8b5cf6;
+  --badge-active-text: #ffffff;
+  --badge-human: #3b82f6;
+  --badge-other: rgba(255, 255, 255, 0.08);
+  --badge-text: rgba(255, 255, 255, 0.85);
+  --badge-score-bg: rgba(0, 0, 0, 0.5);
+
+  /* Score */
+  --score-win-bg: rgba(139, 92, 246, 0.12);
+  --score-win-border: rgba(139, 92, 246, 0.3);
+  --score-win-text: #a78bfa;
+  --score-card: rgba(139, 92, 246, 0.3);
+
+  /* Cards */
+  --card-back-top: #1a3a5c;
+  --card-back-mid: #2563a0;
+
+  /* Shadows */
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --shadow-card-hover: 0 6px 20px rgba(0, 0, 0, 0.4);
+  --shadow-card-selected: 0 8px 25px rgba(139, 92, 246, 0.4);
+  --shadow-badge: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --shadow-table: 0 20px 60px rgba(0, 0, 0, 0.6);
+  --shadow-menu: 0 8px 32px rgba(0, 0, 0, 0.5);
+
+  /* Text */
+  --text-primary: #f0f0f0;
+  --text-secondary: rgba(255, 255, 255, 0.6);
+  --text-muted: rgba(255, 255, 255, 0.35);
+
+  /* Menu dropdown — dark version */
+  --menu-bg: #1a1a2e;
+  --menu-text: #e2e8f0;
+  --menu-border: rgba(255, 255, 255, 0.1);
+  --menu-hover: rgba(255, 255, 255, 0.06);
 }
 
 html, body, #root {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  background: var(--color-bg-gradient-start);
+  background: var(--bg-start, #0d5e28);
   height: 100%;
   height: 100dvh;
   touch-action: manipulation;
@@ -87,7 +140,7 @@ html, body, #root {
 }
 
 ::selection {
-  background: rgba(46, 204, 113, 0.3);
+  background: var(--accent-glow, rgba(46, 204, 113, 0.3));
 }
 
 /* Card deal entrance animation */
@@ -107,96 +160,8 @@ html, body, #root {
   opacity: 0;
 }
 
-/* Pass selection: no special CSS needed — Card handles its own lift */
-
-/* Trick card entrance animation */
-@keyframes trickCardIn {
-  0% {
-    scale: 0;
-    opacity: 0;
-  }
-  100% {
-    scale: 1;
-    opacity: 1;
-  }
-}
-
-/* GPU-accelerated animations */
-@layer utilities {
-  .gpu-accelerated {
-    transform: translateZ(0);
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-  }
-  .card-snap {
-    transition: transform 0.15s ease-out;
-  }
-}
-
-/* Respect reduced motion preference */
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-  }
-}
-
-/* ═══════════════════════════════════════
-   Theme Definitions
-   ═══════════════════════════════════════ */
-[data-theme="classic"] {
-  --felt-dark: #094a20; --felt-mid: #0d6e38; --felt-light: #1a8a4a;
-  --felt-glow: rgba(46, 204, 113, 0.15); --felt-border: rgba(139, 105, 20, 0.6);
-  --bg-start: #0d5e28; --bg-end: #094a20;
-  --accent: #2ecc71; --accent-dark: #27ae60; --accent-glow: rgba(46, 204, 113, 0.3);
-  --score-win: rgba(46, 204, 113, 0.2); --score-win-border: rgba(46, 204, 113, 0.3);
-  --score-win-text: #2ecc71; --score-card: rgba(46, 204, 113, 0.4);
-}
-[data-theme="ocean"] {
-  --felt-dark: #0a3d5c; --felt-mid: #0e5a8a; --felt-light: #1680bf;
-  --felt-glow: rgba(22, 128, 191, 0.15); --felt-border: rgba(30, 90, 140, 0.6);
-  --bg-start: #0a3d5c; --bg-end: #062a40;
-  --accent: #3498db; --accent-dark: #2980b9; --accent-glow: rgba(52, 152, 219, 0.3);
-  --score-win: rgba(52, 152, 219, 0.2); --score-win-border: rgba(52, 152, 219, 0.3);
-  --score-win-text: #3498db; --score-card: rgba(52, 152, 219, 0.4);
-}
-[data-theme="royal"] {
-  --felt-dark: #2d1b4e; --felt-mid: #4a2d7a; --felt-light: #6b3fa0;
-  --felt-glow: rgba(107, 63, 160, 0.15); --felt-border: rgba(100, 60, 150, 0.6);
-  --bg-start: #2d1b4e; --bg-end: #1a0f30;
-  --accent: #9b59b6; --accent-dark: #8e44ad; --accent-glow: rgba(155, 89, 182, 0.3);
-  --score-win: rgba(155, 89, 182, 0.2); --score-win-border: rgba(155, 89, 182, 0.3);
-  --score-win-text: #9b59b6; --score-card: rgba(155, 89, 182, 0.4);
-}
-[data-theme="midnight"] {
-  --felt-dark: #0d1117; --felt-mid: #161b22; --felt-light: #21262d;
-  --felt-glow: rgba(139, 148, 158, 0.08); --felt-border: rgba(48, 54, 61, 0.6);
-  --bg-start: #0d1117; --bg-end: #010409;
-  --accent: #58a6ff; --accent-dark: #388bfd; --accent-glow: rgba(88, 166, 255, 0.2);
-  --score-win: rgba(88, 166, 255, 0.12); --score-win-border: rgba(88, 166, 255, 0.2);
-  --score-win-text: #58a6ff; --score-card: rgba(88, 166, 255, 0.25);
-}
-[data-theme="crimson"] {
-  --felt-dark: #4a1525; --felt-mid: #7a2035; --felt-light: #b02a48;
-  --felt-glow: rgba(176, 42, 72, 0.15); --felt-border: rgba(139, 30, 50, 0.6);
-  --bg-start: #4a1525; --bg-end: #2a0a12;
-  --accent: #e74c3c; --accent-dark: #c0392b; --accent-glow: rgba(231, 76, 60, 0.3);
-  --score-win: rgba(231, 76, 60, 0.2); --score-win-border: rgba(231, 76, 60, 0.3);
-  --score-win-text: #e74c3c; --score-card: rgba(231, 76, 60, 0.4);
-}
-[data-theme="gold"] {
-  --felt-dark: #3d2e0a; --felt-mid: #6b5210; --felt-light: #a07a18;
-  --felt-glow: rgba(160, 122, 24, 0.15); --felt-border: rgba(180, 130, 20, 0.6);
-  --bg-start: #3d2e0a; --bg-end: #241a05;
-  --accent: #f39c12; --accent-dark: #e67e22; --accent-glow: rgba(243, 156, 18, 0.3);
-  --score-win: rgba(243, 156, 18, 0.2); --score-win-border: rgba(243, 156, 18, 0.3);
-  --score-win-text: #f39c12; --score-card: rgba(243, 156, 18, 0.4);
-}
-
 /* Focus visible styles for keyboard navigation */
 :focus-visible {
-  outline: 2px solid rgba(59, 130, 246, 0.8);
+  outline: 2px solid var(--accent, #2ecc71);
   outline-offset: 2px;
 }
-

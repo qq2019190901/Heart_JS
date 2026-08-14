@@ -208,20 +208,24 @@ const Table: React.FC<TableProps> = memo(({
             aria-label={`${player.name} ${isActive ? '(回合中)' : ''} 当前 ${player.score} 分`}
           >
             <div
-              className={`px-1.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap backdrop-blur-sm flex items-center gap-0.5 ${
-                isActive
-                  ? 'bg-amber-400/90 text-gray-900 shadow-lg shadow-amber-400/30'
-                  : isHuman
-                    ? 'bg-blue-500/80 text-white'
-                    : 'bg-black/40 text-white/80'
-              }`}
-              style={{ fontSize: `${badgeFontSizePx}px` }}
+              className="px-1.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap flex items-center gap-0.5"
+              style={{
+                fontSize: `${badgeFontSizePx}px`,
+                background: isActive ? 'var(--badge-active, #fbbf24)' : isHuman ? 'var(--badge-human, #3b82f6)' : 'var(--badge-other, rgba(255,255,255,0.08))',
+                color: isActive ? 'var(--badge-active-text, #1a1a00)' : 'var(--badge-text, rgba(255,255,255,0.85))',
+                boxShadow: isActive ? '0 2px 8px var(--accent-glow, rgba(46,204,113,0.3))' : 'var(--shadow-badge, 0 4px 12px rgba(0,0,0,0.15))',
+              }}
             >
               {isHuman ? '你' : player.name}
               {isActive && <span className="ml-0.5 animate-pulse" aria-hidden="true">&#9679;</span>}
               <span
-                className="text-white/60 bg-black/40 px-1 py-0.5 rounded-full"
-                style={{ fontSize: `${scoreFontSizePx}px` }}
+                className="rounded-full"
+                style={{
+                  fontSize: `${scoreFontSizePx}px`,
+                  background: 'var(--badge-score-bg, rgba(0,0,0,0.4))',
+                  color: 'rgba(255,255,255,0.6)',
+                  padding: '1px 4px',
+                }}
               >
                 {player.score} 分
               </span>
@@ -253,16 +257,25 @@ const Table: React.FC<TableProps> = memo(({
             aria-label={`${humanPlayer.name} 当前 ${humanPlayer.score} 分`}
           >
             <div
-              className={`px-1.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap backdrop-blur-sm flex items-center gap-0.5 ${
-                isActive
-                  ? 'bg-amber-400/90 text-gray-900 shadow-lg shadow-amber-400/30'
-                  : 'bg-blue-500/80 text-white'
-              }`}
-              style={{ fontSize: `${badgeFontSizePx}px` }}
+              className="px-1.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap flex items-center gap-0.5"
+              style={{
+                fontSize: `${badgeFontSizePx}px`,
+                background: isActive ? 'var(--badge-active, #fbbf24)' : 'var(--badge-human, #3b82f6)',
+                color: isActive ? 'var(--badge-active-text, #1a1a00)' : 'var(--badge-text, #fff)',
+                boxShadow: isActive ? '0 2px 8px var(--accent-glow, rgba(46,204,113,0.3))' : 'var(--shadow-badge, 0 4px 12px rgba(0,0,0,0.15))',
+              }}
             >
               <span>{humanPlayer.name}</span>
               {isActive && <span className="animate-pulse" aria-hidden="true">●</span>}
-              <span className="text-white/60 bg-black/40 px-1 py-0.5 rounded-full">
+              <span
+                className="rounded-full"
+                style={{
+                  fontSize: `${badgeFontSizePx}px`,
+                  background: 'var(--badge-score-bg, rgba(0,0,0,0.4))',
+                  color: 'rgba(255,255,255,0.6)',
+                  padding: '1px 4px',
+                }}
+              >
                 {humanPlayer.score}分
               </span>
               {passConfirmAction}
@@ -295,16 +308,19 @@ const Table: React.FC<TableProps> = memo(({
         );
       })()}
 
-      {/* ── Table (green felt) ───────────────────────────────────── */}
+      {/* ── Table ─────────────────────────────────────────────────── */}
       <div
-        className="rounded-xl border-amber-900/60 shadow-2xl overflow-hidden"
+        className="overflow-hidden"
         style={{
           position: 'absolute',
           left: `${tableLeft}px`,
           top: `${tableTop}px`,
           width: `${tableW}px`,
           height: `${tableH}px`,
-          background: 'radial-gradient(ellipse at center, var(--color-felt-light, #1a8a4a) 0%, var(--color-felt-mid, #0d6e38) 50%, var(--color-felt-dark, #094a20) 100%)',
+          borderRadius: '12px',
+          border: '1px solid var(--felt-border, rgba(139,105,20,0.7))',
+          background: 'radial-gradient(ellipse at center, var(--felt-light, #1a8a4a) 0%, var(--felt-mid, #0d6e38) 50%, var(--felt-dark, #094a20) 100%)',
+          boxShadow: 'var(--shadow-table, 0 20px 60px rgba(0,0,0,0.5))',
         }}
         role="region"
         aria-label="牌桌区域"
