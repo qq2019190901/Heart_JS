@@ -615,13 +615,6 @@ function App() {
     return () => clearTimeout(t1);
   }, [gameState?.phase, mode]);
 
-  // ========== Common: Exit Handler ==========
-
-  const handleExit = useCallback(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window as any).electronAPI?.exit();
-  }, []);
-
   // ========== Common: Card Click Handler ==========
 
   const handleCardClick = useCallback((card: Card) => {
@@ -818,8 +811,8 @@ function App() {
     <div className="relative w-full h-full flex flex-col overflow-visible" style={{
       background: 'linear-gradient(180deg, var(--color-bg-gradient-start, #0d5e28) 0%, var(--color-bg-gradient-end, #094a20) 100%)',
     }}>
-      {/* Top bar — clear status bar (40px) and corner curve */}
-      <div className="flex items-center justify-between px-2 py-1 sm:px-4 sm:py-2 bg-black/0 shrink-0 fixed top-0 left-0 right-0 z-50" style={{ paddingTop: '20px' }}>
+      {/* Top bar — menu button and round info */}
+      <div className="flex items-center justify-between px-2 py-2 sm:px-4 sm:py-3 bg-black/0 shrink-0 relative z-50">
         <div className="relative" onClick={(e) => e.stopPropagation()}>
           <button
             className="text-white/60 hover:text-white transition-colors"

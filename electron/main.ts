@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, Menu } from 'electron';
 import { spawn } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -70,8 +70,8 @@ function createWindow() {
     height: 800,
     minWidth: 320,
     minHeight: 480,
-    frame: false,
-    backgroundColor: '#0d5e28',
+    frame: true,
+    show: false,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -104,8 +104,8 @@ function createWindow() {
     win.webContents.openDevTools();
   }
 
-  win.webContents.on('did-finish-load', () => {
-    console.log('[Electron] Page loaded successfully');
+  win.on('ready-to-show', () => {
+    win.show();
   });
 
   win.webContents.on('console-message', (_event, _level, message) => {
@@ -131,7 +131,10 @@ function createWindow() {
 
 ipcMain.on('app-exit', () => app.quit());
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => {
+  Menu.setApplicationMenu(null);
+  createWindow();
+});
 
 app.on('window-all-closed', () => {
   peerServerProcess?.kill();

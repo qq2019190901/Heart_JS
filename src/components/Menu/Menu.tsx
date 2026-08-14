@@ -80,51 +80,109 @@ const Menu: React.FC<MenuProps> = memo(({
   return (
     <div className="min-h-screen min-h-dvh flex flex-col items-center justify-center relative overflow-hidden"
       style={{
-        background: 'linear-gradient(135deg, #0d5e28 0%, #1a7a3a 30%, #0d5e28 70%, #094a20 100%)',
+        background: 'linear-gradient(160deg, #0a0a0f 0%, #12121c 40%, #1a1a2e 100%)',
       }}>
+      {/* Ambient glow */}
+      <div className="absolute top-[10%] left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full pointer-events-none select-none"
+        style={{
+          background: 'radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%)',
+        }}
+      />
+      <div className="absolute bottom-[10%] left-0 w-[300px] h-[300px] rounded-full pointer-events-none select-none"
+        style={{
+          background: 'radial-gradient(circle, rgba(239,68,68,0.06) 0%, transparent 70%)',
+        }}
+      />
+      <div className="absolute bottom-[5%] right-0 w-[250px] h-[250px] rounded-full pointer-events-none select-none"
+        style={{
+          background: 'radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 70%)',
+        }}
+      />
+
       {/* Floating suit symbols */}
-      {[...Array(6)].map((_, i) => (
-        <motion.div
-          key={i}
-          className="absolute text-white/[0.08] select-none pointer-events-none"
-          style={{
-            left: `${15 + i * 15}%`,
-            top: `${10 + (i % 3) * 25}%`,
-            fontSize: isPhone ? '1.5rem' : isTablet ? '2rem' : '3rem',
-          }}
-          animate={{
-            y: [0, -15, 0],
-            rotate: [0, 5, -5, 0],
-            opacity: [0.08, 0.15, 0.08],
-          }}
-          transition={{
-            duration: 4 + i * 0.5,
-            repeat: Infinity,
-            ease: 'easeInOut',
-            delay: i * 0.3,
-          }}
-        >
-          {['♥', '♦', '♣', '♠', '♥', '♦'][i]}
-        </motion.div>
-      ))}
+      {[...Array(8)].map((_, i) => {
+        const suits = ['♥', '♦', '♣', '♠', '♥', '♦', '♣', '♠'];
+        return (
+          <motion.div
+            key={i}
+            className="absolute select-none pointer-events-none"
+            style={{
+              left: `${8 + i * 13}%`,
+              top: `${8 + (i % 4) * 24}%`,
+              fontSize: isPhone ? '1.2rem' : isTablet ? '1.8rem' : '2.5rem',
+              opacity: 0.04,
+              color: 'white',
+            }}
+            animate={{
+              y: [0, -12, 0],
+              rotate: [0, 8, -8, 0],
+              opacity: [0.04, 0.1, 0.04],
+            }}
+            transition={{
+              duration: 5 + i * 0.4,
+              repeat: Infinity,
+              ease: 'easeInOut',
+              delay: i * 0.25,
+            }}
+          >
+            {suits[i]}
+          </motion.div>
+        );
+      })}
 
       {/* Title */}
       <motion.div
         initial={{ y: -30, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, type: 'spring' }}
-        className="text-center mb-4 sm:mb-6 px-4 z-10"
+        className="text-center mb-5 sm:mb-7 px-4 z-10"
       >
-        <h1 className={titleSize} style={{ textShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
+        {/* Card suit icon */}
+        <div className="flex justify-center mb-2">
+          <motion.div
+            className="text-3xl sm:text-4xl md:text-5xl"
+            style={{ filter: 'drop-shadow(0 0 12px rgba(239,68,68,0.5))' }}
+            animate={{ rotate: [0, 10, -10, 0], scale: [1, 1.1, 1] }}
+            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+          >
+            ♥
+          </motion.div>
+        </div>
+        <h1 className={titleSize} style={{
+          textShadow: '0 0 40px rgba(139,92,246,0.3), 0 2px 10px rgba(0,0,0,0.8)',
+          background: 'linear-gradient(135deg, #fff 0%, #c4b5fd 50%, #f9a8d4 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
+        }}>
           红心大战
         </h1>
-        <p className={`${subtitleSize} text-white/50 tracking-widest mt-1`}>HEARTS</p>
+        <p className={`${subtitleSize} text-white/30 tracking-[0.3em] mt-1.5 uppercase`}>
+          HEARTS · CARD GAME
+        </p>
       </motion.div>
 
       {/* Buttons */}
-      <div className={`flex flex-col gap-2 sm:gap-3 ${buttonWidth} z-10 px-4`}>
-        <MenuButton label="单人游戏" sub="与AI对战" onClick={onStartSingle} delay={0.2} btnSize={btnSizeClass} subSize={btnSubSize} />
-        <MenuButton label="局域网联机" sub="" onClick={() => setShowLanPanel(!showLanPanel)} delay={0.4} btnSize={btnSizeClass} subSize={btnSubSize} />
+      <div className={`flex flex-col gap-2.5 sm:gap-3 ${buttonWidth} z-10 px-4`}>
+        <MenuButton
+          label="单人游戏"
+          sub="与AI对战"
+          icon="🤖"
+          onClick={onStartSingle}
+          delay={0.2}
+          btnSize={btnSizeClass}
+          subSize={btnSubSize}
+          accent="violet"
+        />
+        <MenuButton
+          label="局域网联机"
+          sub=""
+          icon="🌐"
+          onClick={() => setShowLanPanel(!showLanPanel)}
+          delay={0.4}
+          btnSize={btnSizeClass}
+          subSize={btnSubSize}
+          accent="blue"
+        />
       </div>
 
       {/* LAN Panel */}
@@ -132,12 +190,13 @@ const Menu: React.FC<MenuProps> = memo(({
         <motion.div
           className={`z-20 mt-3 sm:mt-4 ${lanPanelWidth} rounded-xl p-3 sm:p-4`}
           style={{
-            background: 'rgba(0,0,0,0.4)',
+            background: 'linear-gradient(135deg, rgba(18,18,30,0.9) 0%, rgba(26,26,46,0.9) 100%)',
             backdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255,255,255,0.15)',
+            border: '1px solid rgba(139,92,246,0.2)',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05)',
           }}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 10, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ duration: 0.3 }}
         >
           <h3 className={`text-white font-bold text-center mb-2 sm:mb-3 ${isPhone ? 'text-sm' : 'text-base'}`}>局域网联机</h3>
@@ -162,7 +221,7 @@ const Menu: React.FC<MenuProps> = memo(({
                 </button>
               ))}
             </div>
-            <p className={`text-white/40 text-center mt-1 ${isPhone ? 'text-[8px]' : 'text-[10px]'}`}>
+            <p className={`text-white/30 text-center mt-1 ${isPhone ? 'text-[8px]' : 'text-[10px]'}`}>
               {serverMode === 'embedded' ? '自动启动服务器，等待他人加入' : '输入他人的房间号或 IP 加入'}
             </p>
           </div>
@@ -179,8 +238,8 @@ const Menu: React.FC<MenuProps> = memo(({
                   placeholder="IP 地址"
                   className={`flex-1 rounded-lg text-white font-mono ${inputSize}`}
                   style={{
-                    background: 'rgba(255,255,255,0.1)',
-                    border: '1px solid rgba(255,255,255,0.2)',
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.12)',
                     outline: 'none',
                   }}
                 />
@@ -191,8 +250,8 @@ const Menu: React.FC<MenuProps> = memo(({
                   placeholder="端口"
                   className={`w-16 sm:w-20 rounded-lg text-white font-mono ${inputSize}`}
                   style={{
-                    background: 'rgba(255,255,255,0.1)',
-                    border: '1px solid rgba(255,255,255,0.2)',
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.12)',
                     outline: 'none',
                   }}
                 />
@@ -212,8 +271,8 @@ const Menu: React.FC<MenuProps> = memo(({
                   placeholder="房间号（留空自动生成）"
                   className={`flex-1 rounded-lg text-white tracking-widest font-mono ${inputSize}`}
                   style={{
-                    background: 'rgba(255,255,255,0.1)',
-                    border: '1px solid rgba(255,255,255,0.2)',
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.12)',
                     outline: 'none',
                   }}
                   maxLength={12}
@@ -244,8 +303,8 @@ const Menu: React.FC<MenuProps> = memo(({
                   placeholder="房间号"
                   className={`flex-1 rounded-lg text-white tracking-widest font-mono ${inputSize}`}
                   style={{
-                    background: 'rgba(255,255,255,0.1)',
-                    border: '1px solid rgba(255,255,255,0.2)',
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid rgba(255,255,255,0.12)',
                     outline: 'none',
                   }}
                   maxLength={12}
@@ -270,7 +329,7 @@ const Menu: React.FC<MenuProps> = memo(({
       {/* Exit button — Electron only */}
       {(typeof (window as any).electronAPI !== 'undefined') && (
         <motion.button
-          className={`mt-3 text-white/25 hover:text-red-400 transition-colors z-10 ${isPhone ? 'text-[9px]' : isTablet ? 'text-xs' : 'text-xs sm:text-sm'}`}
+          className={`mt-3 text-white/40 hover:text-red-400 transition-colors z-10 ${isPhone ? 'text-[9px]' : isTablet ? 'text-xs' : 'text-xs sm:text-sm'}`}
           onClick={() => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (window as any).electronAPI?.exit();
@@ -278,6 +337,7 @@ const Menu: React.FC<MenuProps> = memo(({
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6, duration: 0.5 }}
+          whileTap={{ scale: 0.97 }}
         >
           退出游戏
         </motion.button>
@@ -321,30 +381,49 @@ Menu.displayName = 'Menu';
 interface MenuButtonProps {
   label: string;
   sub: string;
+  icon: string;
   onClick: () => void;
   delay: number;
   btnSize: string;
   subSize: string;
+  accent?: 'violet' | 'blue';
 }
 
-const MenuButton: React.FC<MenuButtonProps> = memo(({ label, sub, onClick, delay, btnSize, subSize }) => (
+const accentBorders: Record<string, string> = {
+  violet: 'rgba(139,92,246,0.4)',
+  blue: 'rgba(59,130,246,0.4)',
+};
+const accentShadows: Record<string, string> = {
+  violet: 'rgba(139,92,246,0.25)',
+  blue: 'rgba(59,130,246,0.25)',
+};
+
+const MenuButton: React.FC<MenuButtonProps> = memo(({ label, sub, icon, onClick, delay, btnSize, subSize, accent = 'violet' }) => (
   <motion.button
-    className={`px-4 sm:px-6 rounded-xl text-white font-semibold tracking-wide transition-all whitespace-nowrap ${btnSize}`}
+    className={`w-full px-4 sm:px-6 rounded-xl text-white font-semibold tracking-wide transition-all flex items-center gap-3 ${btnSize}`}
     style={{
-      background: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)',
-      border: '1px solid rgba(255,255,255,0.2)',
+      background: 'linear-gradient(135deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%)',
+      border: `1px solid ${accentBorders[accent]}`,
       backdropFilter: 'blur(10px)',
-      boxShadow: '0 4px 15px rgba(0,0,0,0.2)',
+      boxShadow: `0 4px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)`,
     }}
     onClick={onClick}
     initial={{ opacity: 0, x: -30 }}
     animate={{ opacity: 1, x: 0 }}
     transition={{ delay, duration: 0.5 }}
-    whileHover={{ scale: 1.03, background: 'linear-gradient(135deg, rgba(255,255,255,0.25) 0%, rgba(255,255,255,0.1) 100%)' }}
+    whileHover={{
+      scale: 1.02,
+      background: 'linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.05) 100%)',
+      boxShadow: `0 6px 25px rgba(0,0,0,0.4), 0 0 20px ${accentShadows[accent]}`,
+    }}
     whileTap={{ scale: 0.97 }}
   >
-    <div>{label}</div>
-    {sub && <div className={subSize}>{sub}</div>}
+    <span className="text-xl sm:text-2xl select-none">{icon}</span>
+    <div className="text-left flex-1">
+      <div>{label}</div>
+      {sub && <div className={subSize + ' text-white/40'}>{sub}</div>}
+    </div>
+    <span className="text-white/20 text-lg select-none">›</span>
   </motion.button>
 ));
 
