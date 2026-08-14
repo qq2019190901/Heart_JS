@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 import { spawn } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -61,6 +61,7 @@ function createWindow() {
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js'),
     },
   });
 
@@ -113,6 +114,8 @@ function createWindow() {
     mainWindow = null;
   });
 }
+
+ipcMain.on('app-exit', () => app.quit());
 
 app.whenReady().then(createWindow);
 

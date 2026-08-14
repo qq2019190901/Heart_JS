@@ -267,6 +267,18 @@ const Menu: React.FC<MenuProps> = memo(({
         </motion.div>
       )}
 
+      {/* Exit button — Electron only */}
+      <button
+        className={`mt-3 text-white/25 hover:text-red-400 transition-colors z-10 ${isPhone ? 'text-[9px]' : isTablet ? 'text-xs' : 'text-xs sm:text-sm'}`}
+        onClick={() => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (window as any).electronAPI?.exit();
+        }}
+        style={{ display: typeof (window as any).electronAPI !== 'undefined' ? '' : 'none' }}
+      >
+        退出游戏
+      </button>
+
       {/* Rules toggle */}
       <motion.button
         className={`mt-2 sm:mt-4 text-white/40 hover:text-white/70 transition-colors z-10 ${isPhone ? 'text-[9px]' : isTablet ? 'text-xs' : 'text-xs sm:text-sm'}`}

@@ -615,6 +615,13 @@ function App() {
     return () => clearTimeout(t1);
   }, [gameState?.phase, mode]);
 
+  // ========== Common: Exit Handler ==========
+
+  const handleExit = useCallback(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).electronAPI?.exit();
+  }, []);
+
   // ========== Common: Card Click Handler ==========
 
   const handleCardClick = useCallback((card: Card) => {
