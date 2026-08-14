@@ -42,6 +42,9 @@ function App() {
     }
   });
   const [showDropdown, setShowDropdown] = useState(false);
+  const [theme, setTheme] = useState<'classic' | 'ocean' | 'royal' | 'midnight' | 'crimson' | 'gold'>(() => {
+    try { return localStorage.getItem('heart-theme') as any || 'classic'; } catch { return 'classic'; }
+  });
 
   // Deal animation state
   const [dealCount, setDealCount] = useState(0); // unified counter to trigger re-render on every card deal
@@ -76,6 +79,12 @@ function App() {
   useEffect(() => {
     localStorage.setItem('heart-ai-difficulties', JSON.stringify(aiDifficulties));
   }, [aiDifficulties]);
+
+  // Apply theme to document
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('heart-theme', theme);
+  }, [theme]);
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -760,7 +769,8 @@ function App() {
 
   if (!gameState) {
     return (
-      <div className="min-h-screen min-h-dvh bg-emerald-900 flex items-center justify-center">
+      <div className="min-h-screen min-h-dvh flex items-center justify-center"
+        style={{ background: 'var(--bg-start, #0d5e28)' }}>
         <div className="text-white text-xl animate-pulse">游戏中...</div>
       </div>
     );
@@ -824,7 +834,7 @@ function App() {
   return (
     <MotionConfig reducedMotion="user">
     <div className="relative w-full h-full flex flex-col overflow-visible" style={{
-      background: 'linear-gradient(180deg, var(--color-bg-gradient-start, #0d5e28) 0%, var(--color-bg-gradient-end, #094a20) 100%)',
+      background: 'linear-gradient(180deg, var(--bg-start, #0d5e28) 0%, var(--bg-end, #094a20) 100%)',
     }}>
       {/* Top bar — menu button and round info */}
       <div className="flex items-center justify-between px-2 py-2 sm:px-4 sm:py-3 bg-black/0 shrink-0 relative z-50">
@@ -875,6 +885,31 @@ function App() {
                 );
               })}
               <div className="border-t my-1.5" />
+              {/* Theme Section */}
+              <div className="px-3 py-1.5 text-xs font-bold text-gray-400 uppercase tracking-wider">主题</div>
+              <div className="grid grid-cols-3 gap-1.5 px-3 pb-2">
+                {([
+                  ['classic', '🟢 经典绿'],
+                  ['ocean', '🔵 海洋蓝'],
+                  ['royal', '🟣 皇家紫'],
+                  ['midnight', '⚫ 午夜黑'],
+                  ['crimson', '🔴 深红'],
+                  ['gold', '🟡 金辉'],
+                ] as const).map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={(e) => { e.stopPropagation(); setTheme(key); setShowDropdown(false); }}
+                    className={`text-xs px-2 py-1.5 rounded-md transition-all border ${
+                      theme === key
+                        ? 'border-blue-500 bg-blue-500 text-white'
+                        : 'border-gray-200 text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              <div className="border-t my-1.5" />
               {/* Home Button */}
               <button
                 className="w-full text-left px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
@@ -922,7 +957,7 @@ function App() {
             ) : gameState.phase === 'dealing' ? (
               null
             ) : gameState.currentPlayerId === humanId && !waitingForAi ? (
-              <div className="text-green-300 animate-pulse font-semibold">轮到你了！</div>
+              <div className="animate-pulse font-semibold" style={{ color: 'var(--accent, #2ecc71)' }}>轮到你了！</div>
             ) : waitingForAi ? (
               <div className="text-white/50">AI 思考中...</div>
             ) : (
@@ -1139,7 +1174,8 @@ function App() {
                     <div className="flex items-center gap-1 sm:gap-2">
                       <span className="text-sm sm:text-base">{idx === 0 ? '👑' : `#${idx + 1}`}</span>
                       <span className="text-white flex-1 font-medium text-xs sm:text-sm truncate">{player.name}</span>
-                      <span className={`font-bold text-xs sm:text-sm ${idx === 0 ? 'text-green-400' : 'text-white/70'}`}>
+                      <span className={`font-bold text-xs sm:text-sm ${idx === 0 ? '' : 'text-white/70'}`}
+                        style={idx === 0 ? { color: 'var(--score-win-text, #2ecc71)' } : undefined}>
                         {player.roundScore} 分
                       </span>
                       <span className="text-white/50 text-[10px] sm:text-xs">
