@@ -113,7 +113,6 @@ const Table: React.FC<TableProps> = memo(({
           // Fan direction
           const isHorizontal = side === 'top' || side === 'bottom';
           const fanSpacing = isHorizontal ? fanStepX : fanStepY;
-          const fanTotalSize = (displayCount - 1) * fanSpacing + (isHorizontal ? cardW : cardH);
 
           // Position AI hand based on its side
           let handStyle: React.CSSProperties;
@@ -285,7 +284,8 @@ const Table: React.FC<TableProps> = memo(({
 
       {/* ── Turn Status (above human area) ──────────────────────── */}
       {turnStatus && (() => {
-        const statusTop = tableBottom - 65;
+        // Position just above human badge; badgeHeight ≈ fontSize*2 + padding
+        const statusTop = tableBottom - badgeFontSizePx * 2.2 - 4;
         return (
           <div
             className="pointer-events-none"
@@ -331,7 +331,9 @@ const Table: React.FC<TableProps> = memo(({
               const playerIdx = players.findIndex(p => p.id === play.playerId);
               if (playerIdx < 0) return null;
               const side = sideForIdx(playerIdx);
-              const offset = trickOverlapBase + cardIdx * trickOverlapStep;
+              // Constrain offset so cards stay within table bounds (prevent clipping)
+              const maxOffset = Math.min(tableW, tableH) / 2 - 4;
+              const offset = Math.min(trickOverlapBase + cardIdx * trickOverlapStep, maxOffset);
               const tx = getTrickTX(side, offset);
               const ty = getTrickTY(side, offset);
 
