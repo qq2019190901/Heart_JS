@@ -227,6 +227,11 @@ function App() {
 
   const handleLanCreateRoom = useCallback((customRoomId: string) => {
     setMode('lan');
+    setGameState(null);
+    setRoundOver(false);
+    setGameOver(false);
+    setShowPassUI(false);
+    setSelectedPassCardIds(new Set());
 
     setLanConnected(true);
     setLanStatus('waiting');
@@ -256,6 +261,11 @@ function App() {
 
   const handleLanJoinRoom = useCallback((roomCode: string) => {
     setMode('lan');
+    setGameState(null);
+    setRoundOver(false);
+    setGameOver(false);
+    setShowPassUI(false);
+    setSelectedPassCardIds(new Set());
     setLanConnected(true);
     setLanStatus('connecting');
     setLanRoomCode(roomCode.toUpperCase());
@@ -341,6 +351,11 @@ function App() {
     setLanConnected(false);
     setLanErrorMessage('');
     lanPassConfirmedRef.current.clear();
+    setGameState(null);
+    setRoundOver(false);
+    setGameOver(false);
+    setShowPassUI(false);
+    setSelectedPassCardIds(new Set());
     setMode(null);
   }, []);
 
