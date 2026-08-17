@@ -67,10 +67,12 @@ const Table: React.FC<TableProps> = memo(({
   const aiCardH = Math.round(aiCardMinPx * 1.5);
 
   // Top AI hand: horizontal fan, pinned to top edge, horizontally centered
+  // In compact/landscape views, pin to top (offset=0) to maximize table height.
+  // aiHandOffset is still used for left/right inset.
   const topFanW = (13 - 1) * fanStepX + aiCardW;
   const topHandLeft = (cw - topFanW) / 2;
-  const topHandTop = aiHandOffset;
-  const topHandBottom = topHandTop + aiCardH;
+  const topHandTop = 0;
+  const topHandBottom = aiCardH;
 
   // Left AI hand: vertical fan, inset from left edge
   const leftFanH = (13 - 1) * fanStepY + aiCardH;
@@ -206,7 +208,7 @@ const Table: React.FC<TableProps> = memo(({
             aria-label={`${player.name} ${isActive ? '(回合中)' : ''} 当前 ${player.score} 分`}
           >
             <div
-              className="px-1.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap flex items-center gap-0.5"
+              className="px-1.5 py-0 rounded-full text-xs font-semibold whitespace-nowrap flex items-center gap-0.5"
               style={{
                 fontSize: `${badgeFontSizePx}px`,
                 background: isActive ? 'var(--badge-active, #fbbf24)' : isHuman ? 'var(--badge-human, #3b82f6)' : 'var(--badge-other, rgba(255,255,255,0.08))',
@@ -222,7 +224,7 @@ const Table: React.FC<TableProps> = memo(({
                   fontSize: `${scoreFontSizePx}px`,
                   background: 'var(--badge-score-bg, rgba(0,0,0,0.4))',
                   color: 'rgba(255,255,255,0.6)',
-                  padding: '1px 4px',
+                  padding: '0 4px',
                 }}
               >
                 {player.score} 分
@@ -239,8 +241,8 @@ const Table: React.FC<TableProps> = memo(({
         if (!humanPlayer) return null;
         const isActive = currentPlayerId === humanPlayerId;
         const badgeLeft = tcx;
-        // Position badge just below the table, with proper spacing
-        const badgeTop = tableBottom - 34;
+        // Position badge just below the table, with reduced spacing
+        const badgeTop = tableBottom - 16;
         return (
           <div
             key={humanPlayer.id}
@@ -255,7 +257,7 @@ const Table: React.FC<TableProps> = memo(({
             aria-label={`${humanPlayer.name} 当前 ${humanPlayer.score} 分`}
           >
             <div
-              className="px-1.5 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap flex items-center gap-0.5"
+              className="px-1.5 py-0 rounded-full text-xs font-semibold whitespace-nowrap flex items-center gap-0.5"
               style={{
                 fontSize: `${badgeFontSizePx}px`,
                 background: isActive ? 'var(--badge-active, #fbbf24)' : 'var(--badge-human, #3b82f6)',
@@ -271,7 +273,7 @@ const Table: React.FC<TableProps> = memo(({
                   fontSize: `${badgeFontSizePx}px`,
                   background: 'var(--badge-score-bg, rgba(0,0,0,0.4))',
                   color: 'rgba(255,255,255,0.6)',
-                  padding: '1px 4px',
+                  padding: '0 4px',
                 }}
               >
                 {humanPlayer.score}分
@@ -284,8 +286,11 @@ const Table: React.FC<TableProps> = memo(({
 
       {/* ── Turn Status (above human area) ──────────────────────── */}
       {turnStatus && (() => {
-        // Position just above human badge; badgeHeight ≈ fontSize*2 + padding
-        const statusTop = tableBottom - badgeFontSizePx * 2.2 - 4;
+        // Badge occupies ~badgeFontSizePx+10px, sitting at tableBottom-16.
+        // Text box bottom sits just above badge with 4px gap.
+        const badgeH = badgeFontSizePx + 10;
+        const statusTop = tableBottom - 16 - badgeH - 4 - (badgeFontSizePx + 1);
+        const statusH = badgeFontSizePx + 8;
         return (
           <div
             className="pointer-events-none"
@@ -296,6 +301,9 @@ const Table: React.FC<TableProps> = memo(({
               transform: 'translate(-50%, 0)',
               zIndex: 11,
               textAlign: 'center',
+              display: 'flex',
+              alignItems: 'flex-end',
+              height: `${statusH}px`,
             }}
             aria-live="polite"
             role="status"
@@ -309,7 +317,7 @@ const Table: React.FC<TableProps> = memo(({
 
       {/* ── Table ─────────────────────────────────────────────────── */}
       <div
-        className="overflow-hidden"
+        className="overflow-visible"
         style={{
           position: 'absolute',
           left: `${tableLeft}px`,
@@ -317,9 +325,9 @@ const Table: React.FC<TableProps> = memo(({
           width: `${tableW}px`,
           height: `${tableH}px`,
           borderRadius: '12px',
-          border: '1px solid var(--felt-border, rgba(139,105,20,0.7))',
-          background: 'radial-gradient(ellipse at center, var(--felt-light, #1a8a4a) 0%, var(--felt-mid, #0d6e38) 50%, var(--felt-dark, #094a20) 100%)',
-          boxShadow: 'var(--shadow-table, 0 20px 60px rgba(0,0,0,0.5))',
+          border: '1px solid rgba(255,255,255,0.06)',
+          background: 'transparent',
+          boxShadow: 'none',
         }}
         role="region"
         aria-label="牌桌区域"
@@ -344,7 +352,7 @@ const Table: React.FC<TableProps> = memo(({
                   style={{
                     left: '50%',
                     top: '50%',
-                    zIndex: cardIdx + 1,
+                    zIndex: cardIdx + 20,
                     transform: `translate(-50%, -50%) translate(${tx}px, ${ty}px)`,
                     transition: 'transform 0.3s ease-out',
                   }}

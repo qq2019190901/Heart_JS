@@ -176,6 +176,9 @@ function App() {
     };
 
     const onPeerDisconnected = (data: any) => {
+      // If game is in progress, notify host to end the round
+      const hasActiveGame = gameStateRef.current?.phase === 'playing' ||
+                            gameStateRef.current?.phase === 'passing';
       setLanPlayers(prev => {
         const updated = prev.filter(p => p.id !== data.id);
         lanPlayersRef.current = updated;
@@ -185,6 +188,11 @@ function App() {
       if (lanIsHostRef.current) {
         const playerList = lanPlayersRef.current.filter(p => p.id !== data.id).map(p => ({ id: p.id, name: p.name }));
         lanPeer.broadcastPlayerList(playerList);
+        // If a player left during a game, end the current round and restart
+        if (hasActiveGame) {
+          setLanErrorMessage(`${data.name || '一名玩家'} 已断开，本局结束`);
+          setRoundOver(true);
+        }
       }
     };
 
@@ -418,11 +426,12 @@ function App() {
       trickCardMinPx,
       cardW: _cardW,
       cardH: _cardH,
-      // Minimum 40px to clear rounded corners (~44px radius on this device)
-      aiHandOffset: Math.max(16, Math.round(8 + tableT * 52)),
+      // Tighter AI hand offset to maximize table space (was max 16–32px)
+      aiHandOffset: Math.max(10, Math.round(4 + tableT * 30)),
       trickOverlapBase: Math.round(12 + tableT * 24),
       trickOverlapStep: Math.max(8, Math.round(8 + tableT * 14)),
-      badgeOff: Math.round(8 + tableT * 10),
+      // Tighter badge offset to preserve horizontal space (was 8–18px)
+      badgeOff: Math.round(4 + tableT * 5),
       badgeFontSizePx: Math.round(9 + tableT * 5),
       scoreFontSizePx: Math.round(8 + tableT * 4),
       fanStepX: Math.round(_cardW * 0.22),
@@ -466,7 +475,7 @@ function App() {
       if (newState.phase === 'roundOver') setRoundOver(true);
       else if (newState.phase === 'gameOver') setGameOver(true);
       setWaitingForAi(false);
-    }, 500);
+    }, latestDecision.delay ?? 500);
 
     return () => { if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current); };
   }, [gameState?.currentPlayerId, gameState?.phase, gameState?.trickJustCompleted, mode]);
@@ -481,7 +490,17 @@ function App() {
       const senderId = data.from;
       if (!cardId || !senderId || !gameStateRef.current) return;
 
-      const newState = playCard(gameStateRef.current, senderId, cardId);
+      const state = gameStateRef.current;
+      // Guard: ignore plays during the 1-second trick-completion grace period
+      if (state.trickJustCompleted) return;
+
+      // Validate: reject illegal cards (don't follow suit, miss 2♣, etc.)
+      const hand = state.hands.get(senderId) || [];
+      const hb = heartsAreBroken(state.hands, state.highestHeart);
+      const card = hand.find(c => c.id === cardId);
+      if (!card || !canPlayCard(card, hand, state.currentTrick, hb)) return;
+
+      const newState = playCard(state, senderId, cardId);
       setGameState(newState);
       lanPeer.broadcast(newState);
       if (newState.phase === 'roundOver') setRoundOver(true);
@@ -604,7 +623,17 @@ function App() {
               setShowPassUI(true);
               setSelectedPassCardIds(new Set());
             }
-            if (mode === 'lan') lanPeer.broadcast(finalState);
+            if (mode === 'lan') {
+              // Broadcast the post-deal state (with hands) so clients can show their cards
+              lanPeer.broadcast(finalState);
+              // If there's a pass phase, broadcast the passed-card state too
+              if (finalState.passedDirections[finalState.players[0].id] !== 'none') {
+                lanPeer.broadcast(finalState);
+              } else {
+                // No pass: broadcast the playing state directly
+                lanPeer.broadcast(applyCardPass(finalState));
+              }
+            }
           }, 500);
           return;
         }
@@ -699,10 +728,10 @@ function App() {
         const sent = lanPeer.sendToHost('pass-card', { cardIds: Array.from(selectedPassCardIds), type: 'pass-card' });
         if (sent) {
           setLanClientSentPass(true);
-          // Don't close UI yet — wait for host broadcast with new phase
-          setSelectedPassCardIds(new Set());
+          // Keep selection visible until host broadcasts the new state
         } else {
           console.warn('[LAN-CLIENT] Failed to send pass-card to host');
+          setLanErrorMessage('传牌发送失败，请重试');
         }
         return;
       }
@@ -794,6 +823,8 @@ function App() {
   );
 
   // Responsive hand layout — scales with viewport
+  // Hand area is capped by vh so landscape phones keep room for the table.
+  // Cards wider than handMaxH are clipped by overflow:hidden below.
   const handMaxH = resp.vh < 400 ? '80px' : resp.vh < 500 ? '100px' : resp.vh < 650 ? '130px' : '160px';
   const topBarFontSize = resp.compactFactor < 0.2 ? '10px' : resp.compactFactor < 0.5 ? '11px' : undefined;
 
@@ -940,9 +971,9 @@ function App() {
         </div>
       </div>
 
-      {/* Table area — unified arena with hand, overflow-hidden keeps table inside */}
+      {/* Table area — unified arena with hand, overflow-visible allows AI hands to extend */}
       <div className="flex-1 flex flex-col min-h-0 relative overflow-visible">
-        <div className="flex-1 flex items-center justify-center p-0.5 sm:p-4 min-h-0 -mx-0.5 sm:-mx-4">
+        <div className="flex-1 flex items-center justify-center min-h-0" style={{ margin: '-2px' }}>
         <Table
           trick={gameState.currentTrick}
           currentPlayerId={gameState.currentPlayerId}
@@ -974,22 +1005,13 @@ function App() {
             )
           }
           passConfirmAction={isPassingPhase ? (
-            <div className="flex flex-col items-center gap-0.5 mt-0.5">
-              <button
-                onClick={handlePassConfirm}
-                disabled={selectedPassCardIds.size !== maxPass}
-                  className={`font-bold rounded transition-colors ${
-                    resp.minDim < 450 ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1 text-xs'
-                  } ${selectedPassCardIds.size === maxPass ? '' : 'opacity-50 cursor-not-allowed'}`}
-              >
-                确认 ✓
-              </button>
-              {mode === 'lan' && (lanClientSentPass || lanPassSending) && (
-                <div className="text-white/60 text-[8px]">
-                  {lanPassSending ? '等待其他玩家...' : '已传递'}
-                </div>
-              )}
-            </div>
+            <button
+              onClick={handlePassConfirm}
+              disabled={selectedPassCardIds.size !== maxPass}
+              className="font-bold rounded ml-1 px-1.5 py-0.5 text-[10px] align-middle flex-shrink-0 opacity-90 hover:opacity-100 disabled:opacity-40"
+            >
+              确认
+            </button>
           ) : undefined}
           settlementCards={isSettlement ? gameState!.trickCardsWon : undefined}
         />
@@ -1046,7 +1068,7 @@ function App() {
         ) : isSettlement ? (
           /* ── Settlement Phase Hand — show scoring cards ── */
           <div
-            className="flex items-end px-0.5 sm:px-2 overflow-visible"
+            className="flex items-end px-0.5 sm:px-2 overflow-hidden"
             style={{
               maxHeight: handMaxH,
               gap: 0,
@@ -1082,7 +1104,7 @@ function App() {
         ) : (
           /* ── Playing Phase Hand ── */
           <div
-            className="flex items-end px-0.5 sm:px-2 overflow-visible"
+            className="flex items-end px-0.5 sm:px-2 overflow-hidden"
             style={{
               maxHeight: handMaxH,
               gap: 0,
@@ -1113,8 +1135,13 @@ function App() {
                     card={card}
                     onClick={() => {
                       if (isCurrentPlayer && playable) {
-                        if (mode === 'lan') lanPeer.sendToHost('play-card', { cardId: card.id, type: 'play-card' });
-                        else handleCardClick(card);
+                        if (mode === 'lan') {
+                          // Guard against playing during trick-completion grace period
+                          if (gameStateRef.current?.trickJustCompleted) return;
+                          lanPeer.sendToHost('play-card', { cardId: card.id, type: 'play-card' });
+                        } else {
+                          handleCardClick(card);
+                        }
                       }
                     }}
                     disabled={!isCurrentPlayer || waitingForAi || (!playable && isCurrentPlayer)}
