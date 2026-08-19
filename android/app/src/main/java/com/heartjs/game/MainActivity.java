@@ -1,6 +1,7 @@
 package com.heartjs.game;
 
 import android.annotation.SuppressLint;
+import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -10,6 +11,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
+import android.webkit.WebSettings;
 import android.webkit.WebView;
 
 import com.getcapacitor.BridgeActivity;
@@ -35,17 +37,23 @@ public class MainActivity extends BridgeActivity {
 
         // Set IP as a WebView extras so it's available to JS after page loads
         getBridge().getWebView().getSettings().setJavaScriptEnabled(true);
+        getBridge().getWebView().getSettings().setMixedContentMode(
+            WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
 
         // Expose native methods to JavaScript
         getBridge().getWebView().addJavascriptInterface(new AndroidBridge(), "AndroidBridge");
 
-        // Inject IP into JS after the page finishes loading
+        // Inject IP and server port into JS after the page finishes loading
         getBridge().getWebView().setWebChromeClient(new android.webkit.WebChromeClient() {
             @Override
             public void onProgressChanged(WebView view, int newProgress) {
                 if (newProgress == 100) {
+                    int serverPort = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                            .getInt("server_port", -1);
                     view.evaluateJavascript(
-                        "window.__localIp='" + localIp + "';window.dispatchEvent(new Event('localIpReady'));",
+                        "window.__localIp='" + localIp + "';"
+                        + "window.__serverPort=" + serverPort + ";"
+                        + "window.dispatchEvent(new Event('localIpReady'));",
                         null);
                 }
             }
@@ -93,6 +101,11 @@ public class MainActivity extends BridgeActivity {
         public String getLocalIp() {
             SharedPreferences prefs = getApplicationContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
             return prefs.getString(KEY_LOCAL_IP, "127.0.0.1");
+        }
+        @JavascriptInterface
+        public int getServerPort() {
+            SharedPreferences prefs = getApplicationContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            return prefs.getInt("server_port", -1);
         }
     }
 

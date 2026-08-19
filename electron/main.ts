@@ -1,9 +1,12 @@
 import { app, BrowserWindow, ipcMain, Menu } from 'electron';
-import { spawn } from 'child_process';
 import * as path from 'path';
 import * as fs from 'fs';
+import http from 'http';
+import { createServer } from 'https';
+import { SimplePeerServer } from './peer-server';
 
-let peerServerProcess: ReturnType<typeof spawn> | null = null;
+let peerHttpServer: http.Server | null = null;
+let peerServer: SimplePeerServer | null = null;
 let mainWindow: BrowserWindow | null = null;
 
 // Single-instance lock: prevent multiple windows/instances from spawning
@@ -20,20 +23,42 @@ app.on('second-instance', () => {
   }
 });
 
-function getServerCjsPath(): string {
-  // In both packaged and unpacked debug mode:
-  // - process.resourcesPath points to <output>/resources
-  // - server.cjs is at <output>/resources/server.cjs or <output>/resources/app.asar.unpacked/server.cjs
-  const candidates = [
-    path.join(process.resourcesPath, 'server.cjs'),
-    path.join(process.resourcesPath, 'app.asar.unpacked', 'server.cjs'),
-    path.join(__dirname, 'server.cjs'),
-    path.join(__dirname, '..', 'server.cjs'),
-  ];
-  for (const p of candidates) {
-    if (fs.existsSync(p)) return p;
+function startPeerServer() {
+  const httpServer = http.createServer();
+  peerServer = new SimplePeerServer(httpServer, { path: '/peerjs' });
+  peerHttpServer = httpServer;
+
+  const tryListen = (port: number): Promise<void> => {
+    return new Promise((resolve, reject) => {
+      httpServer.once('error', (err: NodeJS.ErrnoException) => {
+        if (err.code === 'EADDRINUSE') {
+          console.warn(`[PeerJS] Port ${port} occupied, trying ${port + 1}`);
+          resolve();
+        } else {
+          reject(err);
+        }
+      });
+      httpServer.listen(port, '0.0.0.0', () => {
+        const addr = httpServer.address() as { port: number };
+        console.log(`[PeerJS] Listening on ws://0.0.0.0:${addr.port}/peerjs?key=peerjs`);
+        resolve();
+      });
+    });
+  };
+
+  tryListen(9000).catch(() => tryListen(9001)).catch((err) => {
+    console.error('[PeerJS] Failed to start server:', err);
+  });
+}
+
+function stopPeerServer() {
+  peerServer?.stop();
+  if (peerHttpServer) {
+    peerHttpServer.close(() => {
+      console.log('[PeerJS] Server stopped');
+      peerHttpServer = null;
+    });
   }
-  throw new Error('Cannot find server.cjs at any candidate path');
 }
 
 function getDistIndexPath(): string {
@@ -81,23 +106,13 @@ function createWindow() {
 
   mainWindow = win;
 
-  // Start embedded PeerJS signaling server
-  const serverCjs = getServerCjsPath();
-  peerServerProcess = spawn(process.execPath, [serverCjs], {
-    stdio: 'pipe',
-  });
-  peerServerProcess.stdout?.on('data', (d: Buffer) => {
-    try { console.log('[PeerJS]', d.toString().trim()); } catch {}
-  });
-  peerServerProcess.stderr?.on('data', (d: Buffer) => {
-    try { console.error('[PeerJS]', d.toString().trim()); } catch {}
-  });
+  // Start embedded PeerJS signaling server (zero external dependencies)
+  startPeerServer();
 
   // Load the app
   if (app.isPackaged) {
     const indexPath = getDistIndexPath();
     console.log('[Electron] Loading:', indexPath);
-    // In packaged mode, loadURL with asar:// scheme works for loading from asar
     win.loadFile(indexPath);
   } else {
     win.loadURL('http://localhost:5173');
@@ -137,7 +152,7 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
-  peerServerProcess?.kill();
+  stopPeerServer();
   if (process.platform !== 'darwin') app.quit();
 });
 

@@ -36,11 +36,16 @@ public class PeerServerService extends Service {
     private static final String CHANNEL_ID = "heartjs_peer_server";
     private static final int NOTIFICATION_ID = 1001;
     private static final int PORT = 9000;
+    private static final int PORT_FALLBACK = 9001;
     private static final String KEY = "peerjs";
+
+    private static final String PREFS_NAME = "heartjs_prefs";
+    private static final String KEY_SERVER_PORT = "server_port";
 
     private PeerJSServer server;
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private volatile boolean isRunning = false;
+    private volatile int actualPort = PORT;
 
     @Override
     public void onCreate() {
@@ -55,14 +60,32 @@ public class PeerServerService extends Service {
     }
 
     private void startServer(String localIp) {
-        try {
-            server = new PeerJSServer(new InetSocketAddress(InetAddress.getByName("0.0.0.0"), PORT));
-            server.start();
-            Log.d(TAG, "PeerJS server started on ws://" + localIp + ":" + PORT + "/peerjs");
-            startCleanup();
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to start server: " + e.getMessage(), e);
+        int[] portsToTry = {PORT, PORT_FALLBACK};
+        for (int port : portsToTry) {
+            try {
+                server = new PeerJSServer(new InetSocketAddress(InetAddress.getByName("0.0.0.0"), port));
+                server.start();
+                actualPort = port;
+                Log.d(TAG, "PeerJS server started on port " + port
+                        + " (localIp=" + localIp + ")");
+                saveServerPort();
+                startCleanup();
+                return;
+            } catch (Exception e) {
+                Log.d(TAG, "Port " + port + " occupied: " + e.getMessage()
+                        + " — trying " + PORT_FALLBACK);
+            }
         }
+        actualPort = -1;
+        saveServerPort();
+        Log.e(TAG, "Failed to start server on any port (tried " + PORT + "," + PORT_FALLBACK + ")");
+    }
+
+    private void saveServerPort() {
+        getSharedPreferences(PREFS_NAME, MODE_PRIVATE)
+                .edit()
+                .putInt(KEY_SERVER_PORT, actualPort)
+                .apply();
     }
 
     /**
@@ -170,8 +193,8 @@ public class PeerServerService extends Service {
     private Notification getNotification() {
         return new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("红心大战服务器")
-                .setContentText("信令服务器运行中 (端口 " + PORT + ")")
-                .setSmallIcon(android.R.drawable.ic_menu_compass)
+                .setContentText("信令服务器运行中 (端口 " + actualPort + ")")
+                .setSmallIcon(R.drawable.ic_notification)
                 .setPriority(NotificationCompat.PRIORITY_LOW)
                 .build();
     }
@@ -201,7 +224,7 @@ public class PeerServerService extends Service {
     }
 
     public String getServerIp() { return getLocalIpAddress(); }
-    public int getServerPort() { return PORT; }
+    public int getServerPort() { return actualPort; }
 
     // ─── PeerJS Server Implementation ────────────────────────────────────────
 
