@@ -274,9 +274,9 @@ function App() {
         setLanStatus('error');
         setLanErrorMessage('创建房间失败，请确认PeerJS服务器已启动');
       });
-  }, [playerName, lanServerHost, lanServerPort]);
+  }, [playerName]);
 
-  const handleLanJoinRoom = useCallback((roomCode: string) => {
+  const handleLanJoinRoom = useCallback((roomCode: string, serverHost: string, serverPort: string) => {
     setMode('lan');
     setGameState(null);
     setRoundOver(false);
@@ -288,8 +288,14 @@ function App() {
     setLanRoomCode(roomCode.toUpperCase());
     setLanIsHost(false);
 
-    // Set server config before connecting
-    lanPeer.setServerConfig({ host: lanServerHost, port: parseInt(lanServerPort) || 9000 });
+    // Clear old saved server config so new IP is used
+    try { localStorage.removeItem('heart-lan-server'); } catch {}
+
+    const targetHost = serverHost?.trim() || '127.0.0.1';
+    const targetPort = parseInt(serverPort) || 9000;
+    lanPeer.setServerConfig({ host: targetHost, port: targetPort });
+    setLanServerHost(targetHost);
+    setLanServerPort(targetPort.toString());
     setLanErrorMessage('');
 
     // Don't set lanPlayerIdRef yet — wait for PeerJS to assign our real ID

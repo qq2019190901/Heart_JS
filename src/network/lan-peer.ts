@@ -29,6 +29,7 @@ export class LanPeerManager {
   private listeners = new Map<string, Set<(data: any) => void>>();
   private connected = false;
   private serverConfig: LanServerConfig = { host: 'localhost', port: 9000 };
+  private _serverPort: number = 9000;
   private _serverMode: ServerMode = 'embedded';
   private _androidLocalIp: string = '';
   private _lanClientPasses: Record<string, Card[]> = {};
@@ -54,13 +55,16 @@ export class LanPeerManager {
     if (!this._isAndroid) return null;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const win = window as any;
-    // Poll up to 3s for the native-injected IP
-    for (let i = 0; i < 6; i++) {
+    // Wait for native side to inject IP and actual server port
+    for (let i = 0; i < 8; i++) {
       const ip = win.__localIp || (win.AndroidBridge ? win.AndroidBridge.getLocalIp() : undefined);
-      if (ip && ip !== '127.0.0.1') {
-        const config: LanServerConfig = { host: ip, port: 9000 };
+      const port = win.__serverPort ?? (win.AndroidBridge ? win.AndroidBridge.getServerPort() : -1);
+      if (ip && ip !== '127.0.0.1' && port >= 0) {
+        const config: LanServerConfig = { host: ip, port };
+        this._serverPort = port;
         this.setAndroidLocalIp(ip);
         this.setServerConfig(config);
+        console.log(`[LAN-HOST] Android server ready: ${ip}:${port}`);
         return config;
       }
       await new Promise(r => setTimeout(r, 500));
@@ -80,6 +84,7 @@ export class LanPeerManager {
   get serverMode() { return this._serverMode; }
   get androidLocalIp() { return this._androidLocalIp; }
   get isAndroid() { return this._isAndroid; }
+  get serverPort() { return this._serverPort; }
 
   static createPeerId(): string {
     return `p-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
@@ -145,11 +150,12 @@ export class LanPeerManager {
   /**
    * Build PeerJS options from server config.
    */
-  private getPeerOptions(): { host: string; port: number; path: string } {
+  private getPeerOptions(): { host: string; port: number; path: string; secure: boolean } {
     return {
       host: this.serverConfig.host,
       port: this.serverConfig.port,
-      path: '/peerjs',
+      path: '/',  // PeerJS appends 'peerjs' automatically, so '/' gives '/peerjs'
+      secure: false,
     };
   }
 
@@ -172,6 +178,7 @@ export class LanPeerManager {
       // If desiredId provided, try to use it; otherwise let server auto-assign
       const peerId = desiredId || undefined;
       this.peer = new Peer(peerId as any, {
+        ...opts,
         debug: 0,
         config: {
           iceServers: [
@@ -227,17 +234,29 @@ export class LanPeerManager {
         this.peer = null;
       }
 
-      // Auto-detect server: URL hash > localStorage (skip localhost) > default
+      // Auto-detect server: URL hash > Android native port > localStorage > default
+      // Note: if user already set serverConfig via setServerConfig(), respect it
       const urlServer = LanPeerManager.getServerFromUrl();
       const savedServer = LanPeerManager.getSavedServer();
+      console.log('[LAN-CLIENT] initAsClient: isElectron=', !!(window as any).electronAPI, 'urlServer=', urlServer, 'savedServer=', savedServer, 'currentConfig=', this.serverConfig, 'android=', this._isAndroid);
       if (urlServer) {
         this.serverConfig = urlServer;
+      } else if (this._isAndroid) {
+        // Use the actual port from the native side (may be fallback port if 9000 is taken)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const win = window as any;
+        const nativePort = win.__serverPort ?? (win.AndroidBridge ? win.AndroidBridge.getServerPort() : -1);
+        if (nativePort > 0) {
+          this.serverConfig = { ...this.serverConfig, port: nativePort };
+          this._serverPort = nativePort;
+        }
       } else if (savedServer && savedServer.host !== '127.0.0.1' && savedServer.host !== 'localhost') {
         this.serverConfig = savedServer;
       } else if (this._serverMode === 'custom' && !this.serverConfig.host) {
         // custom mode but no config set, use default
       }
       this.peer = new Peer(undefined as any, {
+        ...this.getPeerOptions(),
         debug: 0,
         config: {
           iceServers: [

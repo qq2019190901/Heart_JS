@@ -5,7 +5,7 @@ import { LanPeerManager, type ServerMode } from '../../network/lan-peer';
 interface MenuProps {
   onStartSingle: () => void;
   onStartLanHost: (roomId: string) => void;
-  onStartLanJoin: (roomCode: string) => void;
+  onStartLanJoin: (roomCode: string, serverHost: string, serverPort: string) => void;
   theme?: 'classic' | 'modern';
   onThemeChange?: (theme: 'classic' | 'modern') => void;
 }
@@ -17,6 +17,12 @@ const Menu: React.FC<MenuProps> = memo(({
   theme = 'classic',
   onThemeChange,
 }) => {
+  const [buildVersion, setBuildVersion] = useState('');
+
+  useEffect(() => {
+    fetch('./version.txt').then(r => r.text()).then(t => setBuildVersion(t.trim())).catch(() => {});
+  }, []);
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [showLanPanel, setShowLanPanel] = useState(false);
   const [serverMode, setServerMode] = useState<ServerMode>(() => {
@@ -79,7 +85,7 @@ const Menu: React.FC<MenuProps> = memo(({
 
   const handleJoin = () => {
     if (joinRoomCode.trim().length >= 3) {
-      onStartLanJoin(joinRoomCode.trim().toUpperCase());
+      onStartLanJoin(joinRoomCode.trim().toUpperCase(), serverHost, serverPort);
     }
   };
 
@@ -98,7 +104,7 @@ const Menu: React.FC<MenuProps> = memo(({
   };
 
   return (
-    <div className="min-h-screen min-h-dvh flex flex-col items-center justify-center relative overflow-hidden"
+    <div className="min-h-screen min-h-dvh flex flex-col items-center justify-center relative overflow-visible"
       style={{
         background: theme === 'modern'
           ? 'linear-gradient(160deg, #0a0a0f 0%, #12121c 40%, #1a1a2e 100%)'
@@ -213,11 +219,11 @@ const Menu: React.FC<MenuProps> = memo(({
         className="fixed top-4 right-4 z-30 w-9 h-9 rounded-full flex items-center justify-center text-xl transition-all active:scale-90"
         style={{
           background: theme === 'modern'
-            ? 'rgba(139,92,246,0.2)'
-            : 'rgba(0,0,0,0.25)',
+            ? 'rgba(139,92,246,0.35)'
+            : 'rgba(0,0,0,0.5)',
           border: theme === 'modern'
-            ? '1px solid rgba(139,92,246,0.4)'
-            : '1px solid rgba(255,255,255,0.2)',
+            ? '1px solid rgba(139,92,246,0.6)'
+            : '1px solid rgba(255,255,255,0.6)',
           backdropFilter: 'blur(8px)',
         }}
         onClick={() => onThemeChange?.(theme === 'classic' ? 'modern' : 'classic')}
@@ -225,6 +231,14 @@ const Menu: React.FC<MenuProps> = memo(({
       >
         {theme === 'classic' ? '🌙' : '🟢'}
       </button>
+
+      {/* Build version — bottom center */}
+      <div
+        className="absolute bottom-3 left-1/2 -translate-x-1/2 text-[10px] select-none"
+        style={{ color: theme === 'modern' ? 'rgba(255,255,255,0.45)' : 'rgba(255,255,255,0.5)' }}
+      >
+        v{buildVersion || 'unknown'}
+      </div>
 
       {/* LAN Panel */}
       {showLanPanel && (
