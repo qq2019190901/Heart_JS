@@ -8,10 +8,10 @@
     "build": "tsc && tsc -p tsconfig.electron.json && vite build",
     "build:electron": "npm run build && npm run prep-staging && electron-builder --dir",
     "dist:electron": "node scripts/update-version.js && npm run build && npm run prep-staging && electron-builder",
-    "prep-staging": "rm -rf _staging && mkdir _staging && cp dist-electron/main.js _staging/ && cp -r dist _staging/ && cp server.cjs _staging/ && cp package.json _staging/",
+    "build:electron": "npm run build && npm run prep-staging && electron-builder --dir",
+    "prep-staging": "rm -rf _staging && mkdir _staging && cp dist-electron/main.js _staging/ && cp -r dist _staging/ && cp package.json _staging/",
     "preview": "vite preview",
-    "test": "vitest run",
-    "lan-server": "node server.cjs"
+    "test": "vitest run"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",

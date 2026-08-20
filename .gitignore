@@ -16,7 +16,6 @@ _staging
 release
 release-clean
 release-android
-release-apk
 release-electron-builder
 _build
 *.asar
@@ -37,3 +36,25 @@ tsconfig.electron.tsbuildinfo
 *.jar
 *.png
 heart-js-keystore.keystore
+
+# Build temp directories
+_tmp_build
+_release_clean
+_release_final
+_app_asar_content
+_app_asar_extracted
+_app_asar_final
+android/build
+android/app/build
+android/release
+
+# Duplicated config (TS version kept)
+vite.config.js
+vitest.config.js
+capacitor.config.js
+
+# Misc junk
+fix-menu-lan.js
+server.cjs
+C:tempheart_debug.log
+release-heart-js.apk
