@@ -223,7 +223,10 @@ export class LanPeerManager {
    * Client: connect to self-hosted PeerJS server, then connect to host by ID.
    * @param hostId The host's PeerJS ID (room code)
    */
-  initAsClient(myName: string, hostId: string): Promise<boolean> {
+  async initAsClient(myName: string, hostId: string): Promise<boolean> {
+    // Auto-detect Android local IP before proceeding (same as initAsHost)
+    await this.resolveServerConfig().catch(() => {});
+
     return new Promise((resolve) => {
       this._role = 'client';
       this._roomId = hostId;
@@ -249,6 +252,10 @@ export class LanPeerManager {
         if (nativePort > 0) {
           this.serverConfig = { ...this.serverConfig, port: nativePort };
           this._serverPort = nativePort;
+        }
+        // If host is still localhost, use the resolved Android IP
+        if (this.serverConfig.host === 'localhost' || this.serverConfig.host === '127.0.0.1') {
+          this.serverConfig = { ...this.serverConfig, host: this._androidLocalIp || 'localhost' };
         }
       } else if (savedServer && savedServer.host !== '127.0.0.1' && savedServer.host !== 'localhost') {
         this.serverConfig = savedServer;
