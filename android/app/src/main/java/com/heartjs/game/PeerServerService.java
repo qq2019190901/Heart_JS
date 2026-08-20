@@ -350,7 +350,9 @@ public class PeerServerService extends Service {
 
         private String extractParam(String uri, String paramName) {
             if (uri == null) return null;
+            // Try both '?' (first param) and '&' (subsequent params)
             int idx = uri.indexOf('?' + paramName + '=');
+            if (idx < 0) idx = uri.indexOf('&' + paramName + '=');
             if (idx < 0) return null;
             idx += paramName.length() + 2;
             int amp = uri.indexOf('&', idx);
