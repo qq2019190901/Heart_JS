@@ -107,6 +107,21 @@ public class PeerServerService extends Service {
                 case "HEARTBEAT":
                     handleHeartbeat(src, conn);
                     break;
+                case "JOIN":
+                    // Client joining — notify ALL other peers (the host)
+                    Log.d(TAG, "JOIN received from " + src);
+                    for (Map.Entry<String, WebSocket> entry : server.getPeers().entrySet()) {
+                        String otherId = entry.getKey();
+                        if (!otherId.equals(src)) {
+                            try {
+                                entry.getValue().send(message);
+                                Log.d(TAG, "Notified peer " + otherId + " about join from " + src);
+                            } catch (Exception e) {
+                                Log.e(TAG, "Failed to notify peer " + otherId + ": " + e.getMessage());
+                            }
+                        }
+                    }
+                    break;
                 default:
                     // Forward offer/answer/candidate to destination peer
                     forwardMessage(dst, src, message);
@@ -239,23 +254,27 @@ public class PeerServerService extends Service {
         @Override
         public void onOpen(WebSocket conn, ClientHandshake handshake) {
             String uri = handshake.getResourceDescriptor();
+            Log.d(TAG, "onOpen called! URI: " + uri + " from: " + conn.getRemoteSocketAddress()
+                    + " isOpen=" + conn.isOpen());
             String peerId = extractParam(uri, "id");
             String token = extractParam(uri, "token");
             String key = extractParam(uri, "key");
+            Log.d(TAG, "Parsed params: id=" + peerId + " token=" + (token != null ? "present" : "null")
+                    + " key=" + key + " keyMatch=" + KEY.equals(key));
 
-            Log.d(TAG, "Client connecting. URI: " + uri);
-
-            if (peerId == null || token == null || key == null) {
-                Log.w(TAG, "Missing params (id/token/key), rejecting");
+            if (peerId == null || key == null) {
+                Log.w(TAG, "Missing params (id/key), rejecting conn=" + conn.getRemoteSocketAddress());
                 conn.close();
                 return;
             }
             if (!KEY.equals(key)) {
+                Log.w(TAG, "Invalid key from " + conn.getRemoteSocketAddress() + ", rejecting");
                 conn.send("{\"type\":\"ERROR\",\"payload\":{\"msg\":\"Invalid key provided\"}}");
                 conn.close();
                 return;
             }
             if (peers.containsKey(peerId)) {
+                Log.w(TAG, "ID taken: " + peerId + " from " + conn.getRemoteSocketAddress());
                 conn.send("{\"type\":\"ID-TAKEN\",\"payload\":{\"msg\":\"ID is taken\"}}");
                 conn.close();
                 return;
@@ -274,7 +293,7 @@ public class PeerServerService extends Service {
             }
 
             conn.send("{\"type\":\"OPEN\"}");
-            Log.d(TAG, "Peer registered: " + peerId + " (total: " + peers.size() + ")");
+            Log.d(TAG, "Peer registered: " + peerId + " (total peers: " + peers.size() + ")");
         }
 
         @Override
@@ -284,7 +303,8 @@ public class PeerServerService extends Service {
             if (removedId != null) {
                 peers.remove(removedId);
                 queues.remove(removedId);
-                Log.d(TAG, "Peer closed: " + removedId + " code=" + code);
+                Log.d(TAG, "Peer closed: " + removedId + " code=" + code + " reason=\"" + reason + "\""
+                        + " remote=" + remote + " remaining=" + peers.size());
 
                 // Notify all peers about the disconnection
                 for (Map.Entry<String, WebSocket> entry : peers.entrySet()) {
@@ -293,6 +313,8 @@ public class PeerServerService extends Service {
                                 "{\"type\":\"LEAVE\",\"src\":\"" + removedId + "\",\"dst\":\"" + entry.getKey() + "\"}");
                     } catch (Exception ignored) {}
                 }
+            } else {
+                Log.d(TAG, "onClose for unknown/unregistered conn: code=" + code + " reason=\"" + reason + "\"");
             }
         }
 
@@ -308,19 +330,40 @@ public class PeerServerService extends Service {
 
         @Override
         public void onError(WebSocket conn, Exception ex) {
-            if (ex != null) Log.e(TAG, "WebSocket error: " + ex.getMessage());
-            if (conn != null) conn.close();
+            Log.e(TAG, "onError: conn=" + (conn != null ? conn.getRemoteSocketAddress() : "null")
+                    + " ex=" + (ex != null ? ex.getClass().getSimpleName() + ": " + ex.getMessage() : "null"));
+            if (ex != null) Log.e(TAG, "WebSocket error stack:", ex);
+            if (conn != null && conn.isOpen()) conn.close();
+        }
+
+        @Override
+        public org.java_websocket.handshake.ServerHandshakeBuilder onWebsocketHandshakeReceivedAsServer(
+                WebSocket conn, org.java_websocket.drafts.Draft draft, ClientHandshake request)
+                throws org.java_websocket.exceptions.InvalidDataException {
+            String uri = request.getResourceDescriptor();
+            Log.d(TAG, "HANDSHAKE received! URI=" + uri);
+            java.util.Iterator<String> it = request.iterateHttpFields();
+            while (it.hasNext()) {
+                String key = it.next();
+                Log.d(TAG, "  Header: " + key + " = " + request.getFieldValue(key));
+            }
+            return super.onWebsocketHandshakeReceivedAsServer(conn, draft, request);
         }
 
         @Override
         public void onStart() {
-            Log.d(TAG, "PeerJS server started on port " + getPort());
+            setConnectionLostTimeout(0);
+            Log.d(TAG, "PeerJS server started on port " + getPort() + " (idle timeout disabled)");
         }
 
         // ─── Peer management ────────────────────────────────────────────────
 
         public WebSocket getPeer(String id) {
             return peers.get(id);
+        }
+
+        public java.util.Map<String, WebSocket> getPeers() {
+            return peers;
         }
 
         public void removePeer(String id) {

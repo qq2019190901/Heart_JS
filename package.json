@@ -11,7 +11,8 @@
     "build:electron": "npm run build && npm run prep-staging && electron-builder --dir",
     "prep-staging": "rm -rf _staging && mkdir _staging && cp dist-electron/main.js _staging/ && cp -r dist _staging/ && cp package.json _staging/",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "apk": "node scripts/update-version.js && npm run build && npx capacitor sync android && cd android && ./gradlew clean assembleRelease && cp app/build/outputs/apk/release/app-release.apk ../release-apk.apk"
   },
   "dependencies": {
     "@capacitor/android": "^8.5.0",

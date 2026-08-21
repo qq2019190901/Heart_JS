@@ -4,8 +4,9 @@ const config: CapacitorConfig = {
   appId: 'com.heartjs.game',
   appName: '红心大战',
   webDir: 'dist',
+  // Use HTTP scheme to avoid mixed content when connecting to LAN server (HTTP)
   server: {
-    androidScheme: 'https',
+    androidScheme: 'http',
   },
 };
 

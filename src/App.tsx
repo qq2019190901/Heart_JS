@@ -156,6 +156,10 @@ function App() {
         }
         if (state.phase === 'passing') setShowPassUI(true);
         else if (state.phase === 'playing') setShowPassUI(false);
+        if (state.phase === 'passing' || state.phase === 'playing') {
+          setRoundOver(false);
+          setGameOver(false);
+        }
         if (state.phase === 'roundOver') setRoundOver(true);
         else if (state.phase === 'gameOver') setGameOver(true);
       }
@@ -190,8 +194,11 @@ function App() {
         lanPeer.broadcastPlayerList(playerList);
         // If a player left during a game, end the current round and restart
         if (hasActiveGame) {
-          setLanErrorMessage(`${data.name || '一名玩家'} 已断开，本局结束`);
+          const msg = `${data.name || '一名玩家'} 已断开，本局结束`;
+          setLanErrorMessage(msg);
           setRoundOver(true);
+          // Broadcast round-over to remaining clients so they also see the settlement
+          lanPeer.broadcast({ ...gameStateRef.current, phase: 'roundOver' });
         }
       }
     };
@@ -306,6 +313,8 @@ function App() {
       .then((success) => {
         if (success) {
           setLanStatus('ready');
+          // Sync actual port used (may differ from user input if fallback occurred)
+          setLanServerPort(String(lanPeer.serverPort));
           // Now we have the real PeerJS-assigned ID
           lanPlayerIdRef.current = lanPeer.myId;
           const initialPlayers = [{ id: lanPeer.myId, name: playerName, isAi: false }];
@@ -313,12 +322,12 @@ function App() {
           lanPlayersRef.current = initialPlayers;
         } else {
           setLanStatus('error');
-          setLanErrorMessage('加入房间失败，请确认房间号正确');
+          setLanErrorMessage('加入房间失败，请确认房间号和 IP 正确，两台设备需在同一局域网');
         }
       })
       .catch(() => {
         setLanStatus('error');
-        setLanErrorMessage('连接失败，请重试');
+        setLanErrorMessage('连接失败，请确认设备在同一 WiFi 网络下');
       });
   }, [playerName]);
 

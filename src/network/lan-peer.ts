@@ -41,6 +41,13 @@ export class LanPeerManager {
       this._isAndroid = true;
       return true;
     }
+    // Also detect by checking for native bridge presence (more reliable for Capacitor)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const win = window as any;
+    if (win.__localIp || win.__serverPort || (win.AndroidBridge && typeof win.AndroidBridge.getLocalIp === 'function')) {
+      this._isAndroid = true;
+      return true;
+    }
     return false;
   }
 
@@ -154,7 +161,7 @@ export class LanPeerManager {
     return {
       host: this.serverConfig.host,
       port: this.serverConfig.port,
-      path: '/',  // PeerJS appends 'peerjs' automatically, so '/' gives '/peerjs'
+      path: '/',
       secure: false,
     };
   }
@@ -180,29 +187,48 @@ export class LanPeerManager {
       this.peer = new Peer(peerId as any, {
         ...opts,
         debug: 0,
-        config: {
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-          ],
-        },
+        config: { iceServers: [] },
       });
 
-      this.peer.on('open', (id) => {
+        this.peer.on('open', (id) => {
         this._myId = id;
         this._roomId = id;
         this.connected = true;
+        // Persist actual server port for clients to read
+        try { localStorage.setItem('heart-lan-server-port', String(this._serverPort)); } catch {}
         const note = desiredId && id !== desiredId
           ? ` (requested ${desiredId}, got ${id})`
           : '';
-        console.log(`[LAN-HOST] Room ID: ${id}${note} (server: ${opts.host}:${opts.port})`);
+        console.log(`[LAN-HOST] Room ID: ${id}${note} (server: ${this.serverConfig.host}:${this._serverPort})`);
         this.emit('connection-ready', { roomId: id, role: 'host' });
+
+        // Listen for raw WebSocket messages from clients via the server
+        // (e.g., JOIN messages when clients connect)
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const ws = (this.peer as any).socket;
+        if (ws) {
+          ws.on('message', (data: any) => {
+            try {
+              const msg = typeof data === 'string' ? JSON.parse(data) : data;
+              console.log('[LAN-HOST] Raw server message:', msg.type, 'from:', msg.src || 'server');
+              if (msg.type === 'JOIN') {
+                const clientId = msg.src || this._myId;
+                const clientName = msg.payload?.name || clientId;
+                console.log(`[LAN-HOST] Client joined: ${clientName} (${clientId})`);
+                this.emit('peer-connected', { id: clientId, name: clientName });
+              }
+            } catch {}
+          });
+          console.log('[LAN-HOST] Registered raw WebSocket message listener');
+        }
+
         resolve(id);
       });
 
       this.peer.on('connection', (conn) => {
         this.handleGuestConnection(conn);
       });
+
 
       this.peer.on('error', (err) => {
         console.error('[LAN-HOST] Peer error:', err);
@@ -223,10 +249,31 @@ export class LanPeerManager {
    * Client: connect to self-hosted PeerJS server, then connect to host by ID.
    * @param hostId The host's PeerJS ID (room code)
    */
-  async initAsClient(myName: string, hostId: string): Promise<boolean> {
-    // Auto-detect Android local IP before proceeding (same as initAsHost)
-    await this.resolveServerConfig().catch(() => {});
+  async initAsClient(myName: string, hostId: string, maxRetries: number = 3): Promise<boolean> {
+    let lastError: Error | null = null;
 
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const result = await this._initAsClientInner(myName, hostId);
+        return result;
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+        console.warn(`[LAN-CLIENT] Attempt ${attempt}/${maxRetries} failed:`, lastError.message);
+        if (attempt < maxRetries) {
+          // Try alternate port before retrying
+          this._serverPort = this._serverPort === 9000 ? 9001 : 9000;
+          this.serverConfig = { ...this.serverConfig, port: this._serverPort };
+          console.log(`[LAN-CLIENT] Switching to port ${this._serverPort} for retry...`);
+          await new Promise(r => setTimeout(r, 2000));
+        }
+      }
+    }
+
+    console.error('[LAN-CLIENT] All attempts failed after', maxRetries, 'retries:', lastError?.message);
+    return false;
+  }
+
+  private _initAsClientInner(myName: string, hostId: string): Promise<boolean> {
     return new Promise((resolve) => {
       this._role = 'client';
       this._roomId = hostId;
@@ -237,75 +284,105 @@ export class LanPeerManager {
         this.peer = null;
       }
 
-      // Auto-detect server: URL hash > Android native port > localStorage > default
-      // Note: if user already set serverConfig via setServerConfig(), respect it
+      // Auto-detect server: URL hash > Android native bridge > localStorage > default
       const urlServer = LanPeerManager.getServerFromUrl();
       const savedServer = LanPeerManager.getSavedServer();
-      console.log('[LAN-CLIENT] initAsClient: isElectron=', !!(window as any).electronAPI, 'urlServer=', urlServer, 'savedServer=', savedServer, 'currentConfig=', this.serverConfig, 'android=', this._isAndroid);
+      const savedPort = parseInt(localStorage.getItem('heart-lan-server-port') || '', 10);
+      console.log('[LAN-CLIENT] initAsClient: isElectron=', !!(window as any).electronAPI,
+        'urlServer=', urlServer, 'savedServer=', savedServer, 'savedPort=', savedPort,
+        'currentConfig=', this.serverConfig, 'android=', this._isAndroid);
+
       if (urlServer) {
         this.serverConfig = urlServer;
+        console.log('[LAN-CLIENT] Using URL hash server config:', this.serverConfig);
       } else if (this._isAndroid) {
-        // Use the actual port from the native side (may be fallback port if 9000 is taken)
+        // Read from native bridge directly (more reliable than resolveServerConfig timeout)
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const win = window as any;
-        const nativePort = win.__serverPort ?? (win.AndroidBridge ? win.AndroidBridge.getServerPort() : -1);
+        let nativePort = -1;
+        let nativeIp = '';
+        if (win.__serverPort !== undefined) {
+          nativePort = win.__serverPort;
+        } else if (win.AndroidBridge) {
+          nativePort = win.AndroidBridge.getServerPort();
+        }
+        if (win.__localIp) {
+          nativeIp = win.__localIp;
+        } else if (win.AndroidBridge) {
+          nativeIp = win.AndroidBridge.getLocalIp();
+        }
+        console.log('[LAN-CLIENT] Android native bridge: __serverPort=', nativePort, '__localIp=', nativeIp,
+          'AndroidBridge?.getServerPort()=', win.AndroidBridge ? win.AndroidBridge.getServerPort() : 'N/A',
+          'AndroidBridge?.getLocalIp()=', win.AndroidBridge ? win.AndroidBridge.getLocalIp() : 'N/A');
+
         if (nativePort > 0) {
           this.serverConfig = { ...this.serverConfig, port: nativePort };
           this._serverPort = nativePort;
         }
-        // If host is still localhost, use the resolved Android IP
+        // Only override host if it's still localhost (user didn't set custom IP)
         if (this.serverConfig.host === 'localhost' || this.serverConfig.host === '127.0.0.1') {
-          this.serverConfig = { ...this.serverConfig, host: this._androidLocalIp || 'localhost' };
+          this.serverConfig = { ...this.serverConfig, host: nativeIp || this._androidLocalIp || 'localhost' };
         }
-      } else if (savedServer && savedServer.host !== '127.0.0.1' && savedServer.host !== 'localhost') {
+        console.log('[LAN-CLIENT] Final Android server config:', this.serverConfig);
+      } else if (savedServer && savedServer.host !== '127.0.0.1' && savedServer.host !== 'localhost'
+        && (this.serverConfig.host === 'localhost' || this.serverConfig.host === '127.0.0.1')) {
+        // Only apply savedServer when current config is still default (not externally set)
         this.serverConfig = savedServer;
-      } else if (this._serverMode === 'custom' && !this.serverConfig.host) {
-        // custom mode but no config set, use default
+        console.log('[LAN-CLIENT] Using saved server config:', this.serverConfig);
       }
-      this.peer = new Peer(undefined as any, {
+
+      // If we have a saved actual port from a previous host session, prefer it
+      if (savedPort > 0 && savedPort !== this.serverConfig.port) {
+        console.log(`[LAN-CLIENT] Using saved actual port: ${savedPort}`);
+        this.serverConfig = { ...this.serverConfig, port: savedPort };
+        this._serverPort = savedPort;
+      }
+
+      // LAN mode: disable ICE to avoid STUN interference
+      const peerOptions = {
         ...this.getPeerOptions(),
         debug: 0,
-        config: {
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-          ],
-        },
-      });
+        config: { iceServers: [] },
+      };
+      console.log('[LAN-CLIENT] Creating Peer with config:', this.serverConfig, 'options:', peerOptions);
+
+      // Use undefined to let server auto-assign ID (fixes Android compatibility)
+      this.peer = new Peer(undefined as any, peerOptions);
 
       let connected = false;
       const markConnected = () => { if (!connected) { connected = true; } };
       const markFailed = () => { if (!connected) { connected = true; resolve(false); } };
 
-      this.peer.on('open', () => {
-        this._myId = this.peer!.id;
-        console.log(`[LAN-CLIENT] My ID: ${this._myId}, connecting to host ${hostId}`);
-        // Connect immediately after own Peer is registered with server
+      this.peer.on('open', (id) => {
+        this._myId = id;
+        console.log(`[LAN-CLIENT] My ID: ${this._myId}, server connected at ${this.serverConfig.host}:${this._serverPort}, sending JOIN to host ${hostId}`);
+        // Send JOIN via signaling server (for host awareness)
+        this.peer!.socket!.send({ type: 'JOIN', src: this._myId, payload: { name: myName } });
+        console.log('[LAN-CLIENT] JOIN sent');
+        // Establish P2P data connection to host
         const conn = this.peer!.connect(hostId, {
           reliable: true,
           metadata: { name: myName },
         });
-
         conn.on('open', () => {
           this.hostConn = conn;
-          this.connected = true;
-          this.setupHostChannel(conn);
           console.log('[LAN-CLIENT] Connected to host!');
-          this.emit('connection-ready', { role: 'client' });
-          resolve(true);
+          // Notify app that the host is now connected (so App can show host player in list)
+          this.emit('peer-connected', { id: hostId, name: 'Host' });
         });
-
         conn.on('error', (err: any) => {
-          console.error('[LAN-CLIENT] Connection error:', err);
+          console.error('[LAN-CLIENT] P2P connection error:', err);
           this.emit('connection-error', {});
-          resolve(false);
+          markFailed();
         });
-
         this.peer!.on('close', () => markFailed());
+        this.connected = true;
+        this.emit('connection-ready', { role: 'client' });
+        resolve(true);
       });
 
       this.peer.on('error', (err: any) => {
-        console.error('[LAN-CLIENT] Peer error:', err);
+        console.error('[LAN-CLIENT] Peer error:', err.type, err.message, err);
         this.emit('connection-error', {});
         markFailed();
       });
@@ -455,6 +532,8 @@ export class LanPeerManager {
     this._myId = '';
     this._roomId = '';
     this._lanClientPasses = {};
+    // Clear saved port on disconnect
+    try { localStorage.removeItem('heart-lan-server-port'); } catch {}
   }
 
   on(event: LanEvent, callback: (data: any) => void): void {
@@ -481,3 +560,5 @@ export class LanPeerManager {
 }
 
 export const lanPeer = new LanPeerManager();
+// Detect Android environment immediately (navigator/window available at module load)
+lanPeer.detectAndroid();

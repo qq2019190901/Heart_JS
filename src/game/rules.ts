@@ -28,8 +28,9 @@ export function canPlayCard(card: Card, hand: Card[], trick: TrickState | null, 
     return false;
   }
 
-  // Don't have lead suit — can play anything (including hearts as discard)
-  return true;
+  // Don't have lead suit — can only play hearts if they're broken
+  if (heartsBroken || card.suit !== 'hearts') return true;
+  return false;
 }
 
 /**

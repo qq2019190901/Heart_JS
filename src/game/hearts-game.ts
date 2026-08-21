@@ -292,7 +292,7 @@ function finishRound(state: GameState): GameState {
   const sgr = isShotGunTheRose(newState.trickCardsWon);
   if (sgr.found) {
     const scores = { ...newState.scores };
-    // Holder gets 0 points; all others get +26
+    scores[sgr.holderId] = 0; // Shoot-the-moon: holder gets 0, all others +26
     for (const pid of newState.players.map(p => p.id)) {
       if (pid !== sgr.holderId) {
         scores[pid] = (scores[pid] || 0) + 26;

@@ -41,6 +41,7 @@ function startPeerServer() {
       httpServer.listen(port, '0.0.0.0', () => {
         const addr = httpServer.address() as { port: number };
         console.log(`[PeerJS] Listening on ws://0.0.0.0:${addr.port}/peerjs?key=peerjs`);
+        if (peerServer) peerServer.setPort(addr.port);
         resolve();
       });
     });

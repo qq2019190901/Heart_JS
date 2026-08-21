@@ -17,26 +17,52 @@ class SimplePeerServer extends EventEmitter {
     super();
     const path = options.path || '/peerjs';
 
+    // Store actual listening port for client discovery
+    let actualPort = 0;
+
     // Handle HTTP requests
     server.on('request', (req, res) => {
       const url = req.url || '';
       console.log(`[PeerServer] HTTP request: ${req.method} ${url}`);
-      // PeerJS client asks for ID via GET /peerjs/id
-      if (url.startsWith(path + '/id')) {
+
+      // CORS headers — Android WebView origin is http://localhost, requesting host is LAN IP
+      const corsHeaders: Record<string, string> = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      };
+
+      // Handle preflight OPTIONS request
+      if (req.method === 'OPTIONS') {
+        res.writeHead(200, corsHeaders);
+        res.end();
+        return;
+      }
+
+      // Allow client to discover the actual server port
+      if (url === '/peerjs/port' || url === path + '/port') {
+        res.writeHead(200, { 'Content-Type': 'application/json', ...corsHeaders });
+        res.end(JSON.stringify({ port: actualPort }));
+        return;
+      }
+
+      // PeerJS client asks for ID via GET /peerjs/id  (path='/' → URL=/peerjs/id)
+      // Also support legacy double-path for compatibility
+      if (url.startsWith('/peerjs/id') || url.startsWith(path + '/peerjs/id')) {
         const id = `peer-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
         console.log(`[PeerServer] Sending ID: ${id}`);
-        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        res.writeHead(200, { 'Content-Type': 'text/plain', ...corsHeaders });
         res.end(id);
-      } else if (url.startsWith(path + '/key')) {
+      } else if (url.startsWith('/peerjs/key') || url.startsWith(path + '/peerjs/key')) {
         // Return API key
-        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        res.writeHead(200, { 'Content-Type': 'text/plain', ...corsHeaders });
         res.end(KEY);
       } else if (url.startsWith(path)) {
         // Other paths - return server info for discovery
-        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.writeHead(200, { 'Content-Type': 'application/json', ...corsHeaders });
         res.end(JSON.stringify({ name: 'PeerJS Server', version: '1.0.0' }));
       } else {
-        res.writeHead(404);
+        res.writeHead(404, corsHeaders);
         res.end();
       }
     });
@@ -46,16 +72,26 @@ class SimplePeerServer extends EventEmitter {
 
     server.on('upgrade', (request, socket, head) => {
       const url = request.url || '';
+      console.log(`[PeerServer] Upgrade request: ${url}`);
       // Parse: /peerjs?key=peerjs&id=xxx&token=xxx&version=1.5.5
       const keyIndex = url.indexOf('key=');
-      if (!url.startsWith(path) || keyIndex === -1) return;
-
-      const requestedKey = url.substring(keyIndex + 4).split('&')[0];
-      if (requestedKey !== KEY) {
+      // Accept /peerjs?key=... (path='/') or legacy /peerjs/peerjs?key=... (path='/peerjs')
+      const isValidUpgrade = (url.startsWith('/peerjs') || url.startsWith(path + '/peerjs')) && keyIndex >= 0;
+      if (!isValidUpgrade) {
+        console.log('[PeerServer] Upgrade rejected: invalid path or missing key');
         socket.destroy();
         return;
       }
 
+      const requestedKey = url.substring(keyIndex + 4).split('&')[0];
+      console.log(`[PeerServer] Upgrade key check: requested="${requestedKey}", expected="${KEY}"`);
+      if (requestedKey !== KEY) {
+        console.log('[PeerServer] Upgrade rejected: invalid key');
+        socket.destroy();
+        return;
+      }
+
+      console.log('[PeerServer] Accepting WebSocket upgrade');
       this.wss.handleUpgrade(request, socket, head, (ws) => {
         this.wss.emit('connection', ws, request);
       });
@@ -162,6 +198,16 @@ class SimplePeerServer extends EventEmitter {
       q.push(JSON.stringify({ ...msg, src: srcId }));
       this.queues.set(dstId, q);
     }
+  }
+
+  /** Notify callback when server starts listening on a port */
+  onListening(callback: (port: number) => void): void {
+    // Hook into server's 'listening' event — caller must set this before start
+  }
+
+  setPort(port: number): void {
+    // Called by main.ts after server starts listening
+    console.log(`[PeerServer] Port set to ${port}`);
   }
 
   stop(): void {

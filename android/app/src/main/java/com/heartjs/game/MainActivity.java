@@ -39,6 +39,10 @@ public class MainActivity extends BridgeActivity {
         getBridge().getWebView().getSettings().setJavaScriptEnabled(true);
         getBridge().getWebView().getSettings().setMixedContentMode(
             WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+        // Enable WebView remote debugging for Chrome DevTools
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            android.webkit.WebView.setWebContentsDebuggingEnabled(true);
+        }
 
         // Expose native methods to JavaScript
         getBridge().getWebView().addJavascriptInterface(new AndroidBridge(), "AndroidBridge");
