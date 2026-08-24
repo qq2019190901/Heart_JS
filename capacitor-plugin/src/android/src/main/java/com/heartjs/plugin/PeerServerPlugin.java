@@ -1,11 +1,12 @@
 package com.heartjs.plugin;
 
+import android.content.Context;
+import android.content.SharedPreferences;
+
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
-
-import org.java_websocket.interfaces.IWebSocket;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;
@@ -18,11 +19,14 @@ public class PeerServerPlugin extends Plugin {
     @PluginMethod
     public void getServerStatus(PluginCall call) {
         String ip = getLocalIpAddress();
+        // Read the actual port written by PeerServerService (9000 or 9001)
+        SharedPreferences prefs = getActivity().getSharedPreferences("heartjs_prefs", Context.MODE_PRIVATE);
+        int port = prefs.getInt("server_port", 9000);
         org.json.JSONObject result = new org.json.JSONObject();
         try {
             result.put("ip", ip);
-            result.put("port", 9000);
-            result.put("url", "ws://" + ip + ":9000/peerjs");
+            result.put("port", port);
+            result.put("url", "ws://" + ip + ":" + port + "/peerjs");
         } catch (Exception e) {
             call.error("Failed to build result: " + e.getMessage());
             return;

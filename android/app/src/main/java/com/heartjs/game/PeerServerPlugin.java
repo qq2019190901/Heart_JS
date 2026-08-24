@@ -20,6 +20,7 @@ public class PeerServerPlugin extends Plugin {
     @PluginMethod
     public void getServerStatus(PluginCall call) {
         String ip = getLocalIpAddress();
+        // Read the actual port written by PeerServerService (9000 or 9001)
         SharedPreferences prefs = getActivity().getSharedPreferences("heartjs_prefs", Context.MODE_PRIVATE);
         int port = prefs.getInt("server_port", 9000);
         JSObject result = new JSObject();
