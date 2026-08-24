@@ -167,6 +167,15 @@ class SimplePeerServer extends EventEmitter {
         }
         break;
 
+      case 'JOIN':
+        // Broadcast JOIN to all other peers so the host learns about new clients
+        for (const [id, peerConn] of this.peers) {
+          if (id !== srcId && peerConn.readyState === WebSocket.OPEN) {
+            peerConn.send(JSON.stringify(msg));
+          }
+        }
+        break;
+
       case 'LEAVE':
         if (dst) {
           const target = this.peers.get(dst);
