@@ -1,11 +1,10 @@
 import type {
   GameState,
   Card,
-  TrickState,
   Player,
   PassDirection,
 } from './types';
-import { createDeck, dealCards, sortHand } from './deck';
+import { createDeck, dealCards, sortHand, isTwoOfClubs, isQueenOfSpades, countPoints } from './deck';
 import { isShotGunTheRose } from './rules';
 
 export function createInitialState(players: Player[], roundNumber: number = 1): GameState {
@@ -33,16 +32,15 @@ export function dealCardsForRound(state: GameState, roundNumber: number): GameSt
   const newState = { ...state, roundNumber } as GameState;
   const playerIds = newState.players.map(p => p.id);
   const hands = dealCards(newState.deck, playerIds);
-  return buildPassPhase(newState, hands, playerIds);
+  return buildPassPhase(newState, hands);
 }
 
 /** Build passing phase state from already-dealt hands (used after animated deal). */
 export function buildDealState(state: GameState, hands: Map<string, Card[]>): GameState {
-  const playerIds = state.players.map(p => p.id);
-  return buildPassPhase({ ...state, hands }, hands, playerIds);
+  return buildPassPhase({ ...state, hands }, hands);
 }
 
-function buildPassPhase(state: GameState, hands: Map<string, Card[]>, playerIds: string[]): GameState {
+function buildPassPhase(state: GameState, hands: Map<string, Card[]>): GameState {
   const newState = { ...state } as GameState;
   newState.hands = hands;
   newState.deck = [];
@@ -150,7 +148,7 @@ function passCards(hand: Card[], direction: PassDirection): Card[] {
   } else if (direction === 'left' || direction === 'across') {
     // Pass highest-ranked safe cards (excluding hearts and Q of Spades)
     const suitCards: Card[] = [...hand]
-      .filter(c => c.suit !== 'hearts' && !(c.suit === 'spades' && c.rank === 12))
+      .filter(c => c.suit !== 'hearts' && !isQueenOfSpades(c))
       .sort((a, b) => b.rank - a.rank);
     cardsToPass.push(...suitCards.slice(0, count));
   }
@@ -160,7 +158,7 @@ function passCards(hand: Card[], direction: PassDirection): Card[] {
 
 function findTwoOfClubs(hands: Map<string, Card[]>): string | null {
   for (const [playerId, cards] of hands) {
-    if (cards.some(c => c.suit === 'clubs' && c.rank === 2)) {
+    if (cards.some(isTwoOfClubs)) {
       return playerId;
     }
   }
@@ -222,7 +220,7 @@ export function playCard(state: GameState, playerId: string, cardId: string): Ga
   if (card.suit === 'hearts' && newState.leadSuit !== 'hearts') {
     newState.highestHeart = card;
   }
-  if (card.suit === 'spades' && card.rank === 12) {
+  if (isQueenOfSpades(card)) {
     newState.queenOfSpadesPlayed = true;
   }
 
@@ -251,11 +249,7 @@ export function playCard(state: GameState, playerId: string, cardId: string): Ga
     ];
 
     // Award trick points to winner
-    let trickPoints = 0;
-    for (const play of trick.cards) {
-      if (play.card.suit === 'hearts') trickPoints += 1;
-      if (play.card.suit === 'spades' && play.card.rank === 12) trickPoints += 13;
-    }
+    const trickPoints = countPoints(trick.cards.map(c => c.card));
 
     newState.scores = { ...newState.scores };
     newState.scores[winnerId] = (newState.scores[winnerId] || 0) + trickPoints;
@@ -290,11 +284,12 @@ function finishRound(state: GameState): GameState {
 
   // Check Shot Gun The Rose (shoot the moon)
   const sgr = isShotGunTheRose(newState.trickCardsWon);
-  if (sgr.found) {
+  if (sgr.found && sgr.holderId) {
+    const holderId = sgr.holderId;
     const scores = { ...newState.scores };
-    scores[sgr.holderId] = 0; // Shoot-the-moon: holder gets 0, all others +26
+    scores[holderId] = 0; // Shoot-the-moon: holder gets 0, all others +26
     for (const pid of newState.players.map(p => p.id)) {
-      if (pid !== sgr.holderId) {
+      if (pid !== holderId) {
         scores[pid] = (scores[pid] || 0) + 26;
       }
     }
