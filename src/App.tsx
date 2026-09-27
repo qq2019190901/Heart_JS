@@ -1,17 +1,18 @@
-import React, { useState, useCallback, useEffect, useLayoutEffect, useRef, useMemo } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { MotionConfig } from 'framer-motion';
 import { Menu } from './components/Menu/Menu';
 import { CardComponent } from './components/Card/Card';
 import { Table } from './components/Table/Table';
 import { LanLobby } from './components/Lan/LanLobby';
 import type { GameState, Card, Player, PassDirection } from './game/types';
-import { createInitialState, dealCardsForRound, buildDealState, applyCardPass, playCard } from './game/hearts-game';
-import { dealCardsRaw, sortHand } from './game/deck';
-import { getAiDecision } from './game/ai';
+import { createInitialState, buildDealState, applyCardPass, playCard } from './game/hearts-game';
+import { sortHand, cardPoints } from './game/deck';
 import { getAiPlayDecision } from './game/ai-turn';
 import { heartsAreBroken, canPlayCard, getAllPlayableCards, isShotGunTheRose } from './game/rules';
 import { useResponsive } from './hooks/useResponsive';
-import { lanPeer, LanPeerManager } from './network/lan-peer';
+import { lanPeer, type LanEventPayload } from './network/lan-peer';
+import type { WirePlayer } from './network/protocol';
+import { readCardId, readCardIds } from './network/protocol';
 
 type GameMode = 'single' | 'lan';
 
@@ -43,11 +44,17 @@ function App() {
   });
   const [showDropdown, setShowDropdown] = useState(false);
   const [theme, setTheme] = useState<'classic' | 'modern'>(() => {
-    try { return localStorage.getItem('heart-theme') as any || 'classic'; } catch { return 'classic'; }
+    try {
+      const saved = localStorage.getItem('heart-theme');
+      return saved === 'modern' ? 'modern' : 'classic';
+    } catch {
+      return 'classic';
+    }
   });
 
   // Deal animation state
-  const [dealCount, setDealCount] = useState(0); // unified counter to trigger re-render on every card deal
+  // Discarded counter — calling the setter is what forces a re-render per dealt card.
+  const [, setDealCount] = useState(0);
   const isDealingRef = useRef(false);
   const dealIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Shuffled deck for animation display
@@ -73,12 +80,12 @@ function App() {
   const [lanStatus, setLanStatus] = useState<'waiting' | 'ready' | 'connecting' | 'error'>('waiting');
   const [lanErrorMessage, setLanErrorMessage] = useState('');
   const [lanConnected, setLanConnected] = useState(false);
-  const [lanServerHost, setLanServerHost] = useState('127.0.0.1');
-  const [lanServerPort, setLanServerPort] = useState('9000');
-  const [lanPassSending, setLanPassSending] = useState(false);
+  const [, setLanServerHost] = useState('127.0.0.1');
+  const [, setLanServerPort] = useState('9000');
+  const [, setLanPassSending] = useState(false);
   const lanPlayerIdRef = useRef('');
   const lanPassConfirmedRef = useRef<Set<string>>(new Set());
-  const [lanClientSentPass, setLanClientSentPass] = useState(false);
+  const [, setLanClientSentPass] = useState(false);
   const lanPlayersRef = useRef<{ id: string; name: string; isAi: boolean }[]>([]);
 
   // Persist AI difficulties
@@ -102,14 +109,15 @@ function App() {
 
   // ========== LAN Deserializer ==========
 
-  const deserializeLanState = useCallback((raw: any): GameState => {
-    if (!raw) return {} as GameState;
-    const handsRaw = raw.hands || {};
+  const deserializeLanState = useCallback((raw: unknown): GameState => {
+    if (!raw || typeof raw !== 'object') return {} as GameState;
+    const record = raw as Record<string, unknown>;
+    const handsRaw = (record.hands ?? {}) as Record<string, unknown>;
     const hands = new Map<string, Card[]>();
     for (const [k, v] of Object.entries(handsRaw)) {
       if (Array.isArray(v)) hands.set(k, v as Card[]);
     }
-    return { ...raw, hands } as GameState;
+    return { ...record, hands } as unknown as GameState;
   }, []);
 
   // ========== LAN Listeners ==========
@@ -118,15 +126,15 @@ function App() {
   lanIsHostRef.current = lanIsHost;
 
   useEffect(() => {
-    const onDataReceived = (data: any) => {
-      const { from, payload } = data;
-      console.log('[LAN] Message from', from, 'type:', payload?.type);
+    const onDataReceived = (data: LanEventPayload) => {
+      const payload = data.payload as Record<string, unknown> | undefined;
+      const from = typeof data.from === 'string' ? data.from : undefined;
 
       const isHost = lanIsHostRef.current;
 
       // --- Client side: receive player list from host ---
-      if (!isHost && payload?.type === 'player-list' && payload.players) {
-        const remotePlayers = payload.players.map((p: any) => ({
+      if (!isHost && payload?.type === 'player-list' && Array.isArray(payload.players)) {
+        const remotePlayers = (payload.players as WirePlayer[]).map(p => ({
           id: p.id,
           name: p.name,
           isAi: false,
@@ -137,11 +145,12 @@ function App() {
       }
 
       // --- Host side: receive pass-card from clients ---
-      if (isHost && payload?.type === 'pass-card' && payload.cardIds && from) {
+      if (isHost && payload?.type === 'pass-card' && Array.isArray(payload.cardIds) && from) {
         const state = gameStateRef.current;
         if (!state) return;
+        const cardIds = readCardIds(data) ?? [];
         const hand = state.hands.get(from) || [];
-        const cardsToPass = hand.filter(c => payload.cardIds.includes(c.id));
+        const cardsToPass = hand.filter(c => cardIds.includes(c.id));
         lanPeer.clientPasses = { ...lanPeer.clientPasses, [from]: cardsToPass };
         lanPassConfirmedRef.current.add(from);
         checkLanPassComplete();
@@ -171,10 +180,11 @@ function App() {
       }
     };
 
-    const onPeerConnected = (data: any) => {
+    const onPeerConnected = (data: LanEventPayload) => {
+      const { id, name } = data as { id: string; name?: string };
       setLanPlayers(prev => {
-        if (prev.find(p => p.id === data.id)) return prev;
-        const updated = [...prev, { id: data.id, name: data.name || '玩家', isAi: false }];
+        if (prev.find(p => p.id === id)) return prev;
+        const updated = [...prev, { id, name: name || '玩家', isAi: false }];
         lanPlayersRef.current = updated;
         return updated;
       });
@@ -185,26 +195,28 @@ function App() {
       }
     };
 
-    const onPeerDisconnected = (data: any) => {
+    const onPeerDisconnected = (data: LanEventPayload) => {
+      const { id, name } = data as { id: string; name?: string };
       // If game is in progress, notify host to end the round
       const hasActiveGame = gameStateRef.current?.phase === 'playing' ||
                             gameStateRef.current?.phase === 'passing';
       setLanPlayers(prev => {
-        const updated = prev.filter(p => p.id !== data.id);
+        const updated = prev.filter(p => p.id !== id);
         lanPlayersRef.current = updated;
         return updated;
       });
       // Broadcast updated player list to remaining guests
       if (lanIsHostRef.current) {
-        const playerList = lanPlayersRef.current.filter(p => p.id !== data.id).map(p => ({ id: p.id, name: p.name }));
+        const playerList = lanPlayersRef.current.filter(p => p.id !== id).map(p => ({ id: p.id, name: p.name }));
         lanPeer.broadcastPlayerList(playerList);
         // If a player left during a game, end the current round and restart
         if (hasActiveGame) {
-          const msg = `${data.name || '一名玩家'} 已断开，本局结束`;
+          const msg = `${name || '一名玩家'} 已断开，本局结束`;
           setLanErrorMessage(msg);
           setRoundOver(true);
           // Broadcast round-over to remaining clients so they also see the settlement
-          lanPeer.broadcast({ ...gameStateRef.current, phase: 'roundOver' });
+          const state = gameStateRef.current;
+          if (state) lanPeer.broadcast({ ...state, phase: 'roundOver' });
         }
       }
     };
@@ -302,7 +314,11 @@ function App() {
     setLanIsHost(false);
 
     // Clear old saved server config so new IP is used
-    try { localStorage.removeItem('heart-lan-server'); } catch {}
+    try {
+      localStorage.removeItem('heart-lan-server');
+    } catch (err) {
+      console.warn('[LAN] Failed to clear saved server config:', err);
+    }
 
     const targetHost = serverHost?.trim() || '127.0.0.1';
     const targetPort = parseInt(serverPort) || 9000;
@@ -341,10 +357,14 @@ function App() {
 
   const handleAddAi = useCallback(() => {
     if (!lanIsHost || !lanConnected) return;
-    const aiCount = lanPlayersRef.current.filter(p => p.isAi).length;
-    if (aiCount >= 3) return; // max 3 AI + 1 human
-    const aiIdx = aiCount + 1;
-    const newPlayer = { id: `ai-fill-${aiIdx}`, name: `AI ${aiIdx}`, isAi: true };
+    const usedIds = new Set(lanPlayersRef.current.map(p => p.id));
+    // Reuse the same ai-N id scheme as single-player mode so both modes agree.
+    let aiIdx = 0;
+    while (usedIds.has(`ai-${aiIdx}`)) aiIdx++;
+    if (aiIdx >= 3) return; // max 3 AI + 1 human
+    const playerCount = lanPlayersRef.current.length;
+    if (playerCount >= 4) return;
+    const newPlayer = { id: `ai-${aiIdx}`, name: `AI ${aiIdx + 1}`, isAi: true };
     const updated = [...lanPlayersRef.current, newPlayer];
     setLanPlayers(updated);
     lanPlayersRef.current = updated;
@@ -445,8 +465,6 @@ function App() {
     return {
       aiCardMinPx,
       trickCardMinPx,
-      cardW: _cardW,
-      cardH: _cardH,
       // Tighter AI hand offset to maximize table space (was max 16–32px)
       aiHandOffset: Math.max(10, Math.round(4 + tableT * 30)),
       trickOverlapBase: Math.round(12 + tableT * 24),
@@ -518,9 +536,9 @@ function App() {
   useEffect(() => {
     if (mode !== 'lan' || !lanIsHost) return;
 
-    const handleCardPlay = (data: any) => {
-      const cardId = data.payload?.cardId || data.cardId;
-      const senderId = data.from;
+    const handleCardPlay = (data: LanEventPayload) => {
+      const cardId = readCardId(data);
+      const senderId = typeof data.from === 'string' ? data.from : undefined;
       if (!cardId || !senderId || !gameStateRef.current) return;
 
       const state = gameStateRef.current;
@@ -540,10 +558,10 @@ function App() {
       else if (newState.phase === 'gameOver') setGameOver(true);
     };
 
-    const onDataReceived = (data: any) => {
-      if (data.payload?.type === 'play-card' || data.type === 'play-card') {
-        handleCardPlay(data);
-      }
+    const onDataReceived = (data: LanEventPayload) => {
+      const payload = data.payload as { type?: unknown } | undefined;
+      const type = typeof payload?.type === 'string' ? payload.type : data.type;
+      if (type === 'play-card') handleCardPlay(data);
     };
     lanPeer.on('data-received', onDataReceived);
 
@@ -827,7 +845,6 @@ function App() {
     return (
       <LanLobby
         roomId={lanRoomCode}
-        playerName={playerName}
         isHost={lanIsHost}
         players={lanPlayers}
         onReady={handleLanStartGame}
@@ -904,7 +921,7 @@ function App() {
   // Settlement: human player's scoring cards
   const isSettlement = roundOver || gameOver;
   const settlementCards = isSettlement ? gameState!.trickCardsWon : undefined;
-  const humanScoringCards = isSettlement ? (settlementCards?.[humanId] || []).filter(c => c.suit === 'hearts' || (c.suit === 'spades' && c.rank === 12)) : [];
+  const humanScoringCards = isSettlement ? (settlementCards?.[humanId] || []).filter(c => cardPoints(c) > 0) : [];
 
   return (
     <MotionConfig reducedMotion="user">
@@ -1101,7 +1118,6 @@ function App() {
                       card={card}
                       selected={isSelected}
                       elevated={isSelected}
-                      animate={false}
                       small
                       minPx={cardMinPx}
                       ariaLabel={`${card.rank} of ${card.suit}（点击选择传递）`}
@@ -1139,7 +1155,6 @@ function App() {
               >
                 <CardComponent
                   card={card}
-                  animate={false}
                   small
                   minPx={cardMinPx}
                   ariaLabel={`${card.rank} of ${card.suit}`}
@@ -1191,7 +1206,6 @@ function App() {
                       }
                     }}
                     disabled={!isCurrentPlayer || waitingForAi || (!playable && isCurrentPlayer)}
-                    animate={false}
                     small
                     minPx={cardMinPx}
                     ariaLabel={`${card.rank} of ${card.suit}`}
@@ -1207,7 +1221,7 @@ function App() {
       {(roundOver || gameOver) && (() => {
         const allScores = gameState!.players.map(p => {
           const wonCards = gameState!.trickCardsWon?.[p.id] || [];
-          const baseRoundScore = wonCards.filter(c => c.suit === 'hearts' || (c.suit === 'spades' && c.rank === 12)).reduce((sum, c) => sum + (c.suit === 'hearts' ? 1 : 13), 0);
+          const baseRoundScore = wonCards.reduce((sum, c) => sum + cardPoints(c), 0);
           const sgr = isShotGunTheRose(gameState!.trickCardsWon);
           const roundScore = sgr.found ? (p.id === sgr.holderId ? 0 : 26) : baseRoundScore;
           return {
