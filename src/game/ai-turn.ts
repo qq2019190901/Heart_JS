@@ -1,4 +1,4 @@
-import type { GameState, Card, Player } from './types';
+import type { GameState } from './types';
 import { getAiDecision } from './ai';
 import { heartsAreBroken } from './rules';
 
@@ -17,7 +17,7 @@ export function getAiPlayDecision(
   const hand = state.hands.get(currentPlayer.id) || [];
   if (hand.length === 0) return null;
 
-  const difficulty = (currentPlayer as any).difficulty || 'medium';
+  const difficulty = currentPlayer.difficulty ?? 'medium';
   const hb = heartsAreBroken(state.hands, state.highestHeart);
   const aiCtx = {
     scores: state.scores,
@@ -26,7 +26,7 @@ export function getAiPlayDecision(
     queenOfSpadesPlayed: state.queenOfSpadesPlayed,
     highestHeart: state.highestHeart,
   };
-  const decision = getAiDecision(currentPlayer, hand, state.currentTrick, hb, difficulty as 'easy' | 'medium' | 'hard', aiCtx);
+  const decision = getAiDecision(currentPlayer, hand, state.currentTrick, hb, difficulty, aiCtx);
 
   if (decision.cardIds.length === 0) return null;
 

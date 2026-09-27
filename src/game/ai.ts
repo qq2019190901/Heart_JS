@@ -1,5 +1,6 @@
 import type { Card, TrickState, AiDecision, Player, Suit, AiContext } from './types';
-import { canPlayCard, getAllPlayableCards, heartsAreBroken, trickWinner } from './rules';
+import { getAllPlayableCards, trickWinner } from './rules';
+import { cardId, cardPoints, countPoints, isQueenOfSpades } from './deck';
 
 export function getAiDecision(
   player: Player,
@@ -20,7 +21,7 @@ export function getAiDecision(
 
   switch (difficulty) {
     case 'easy':
-      chosen = easyPlay(playable, hand, trick, heartsBroken);
+      chosen = easyPlay(playable);
       break;
     case 'medium':
       chosen = mediumPlay(playable, hand, trick, heartsBroken, aiCtx, player.id);
@@ -43,7 +44,7 @@ function resolveDefault(ctx?: AiContext): AiContext {
 
 // ========== Easy: Pure Random ==========
 
-function easyPlay(playable: Card[], hand: Card[], trick: TrickState | null, _heartsBroken: boolean): Card {
+function easyPlay(playable: Card[]): Card {
   return playable[Math.floor(Math.random() * playable.length)];
 }
 
@@ -56,20 +57,31 @@ function mediumPlay(
   const leadSuit = trick?.cards[0]?.card.suit ?? null;
   const scoreSit = evaluateScoreSituation(playerId, ctx.scores);
 
+  // Cautious players hoard their high cards; players who must catch up dump them.
+  // "Careful" = already dangerous OR currently leading and wanting to stay safe.
+  const careful = scoreSit.dangerLevel !== 'safe' || scoreSit.leading;
+
   // If can follow suit, prefer safe cards (not hearts)
   if (leadSuit && leadSuit !== 'hearts') {
     const followSuit = playable.filter(c => c.suit === leadSuit);
     if (followSuit.length > 0) {
       const safe = followSuit.filter(c => c.suit !== 'hearts');
-      if (safe.length > 0) return safe[0];
-      return followSuit[0];
+      const pool = safe.length > 0 ? safe : followSuit;
+      // Careful: play the lowest card to stay under the trick.
+      // Aggressive: play the highest to take control when behind.
+      const sorted = [...pool].sort((a, b) => careful ? a.rank - b.rank : b.rank - a.rank);
+      return sorted[0];
     }
   }
 
   // Don't play hearts if not broken — more conservative when score is high
   if (!heartsBroken) {
-    const nonHearts = playable.filter(c => c.suit !== 'hearts' && !(c.suit === 'spades' && c.rank === 12));
-    if (nonHearts.length > 0) return nonHearts[0];
+    const nonHearts = playable.filter(c => c.suit !== 'hearts' && !isQueenOfSpades(c));
+    if (nonHearts.length > 0) {
+      // When careful, pick the lowest non-heart; otherwise dump the highest to shed points.
+      const sorted = [...nonHearts].sort((a, b) => careful ? a.rank - b.rank : b.rank - a.rank);
+      return sorted[0];
+    }
   }
 
   // Prefer dumping from suits with fewer remaining cards
@@ -114,7 +126,7 @@ function hardPlay(
     totalScore += adjustForScore(card, scoreSit, trick, heartsBroken);
 
     // SGR defense adjustments
-    totalScore += adjustForSgrDefense(card, trick, sgrThreat, scoreSit);
+    totalScore += adjustForSgrDefense(card, trick, sgrThreat);
 
     if (totalScore < bestScore) {
       bestScore = totalScore;
@@ -159,7 +171,7 @@ function buildKnownCards(hand: Card[], trick: TrickState | null, trickCardsWon: 
     let hasA = false, hasK = false, hasQ = false, hasJ = false;
 
     for (let rank = 2; rank <= 14; rank++) {
-      const id = `${suit}-${rank}`;
+      const id = cardId(suit, rank as Card['rank']);
       if (!selfIds.has(id) && !visibleIds.has(id)) {
         count++;
         if (rank === 14) hasA = true;
@@ -215,11 +227,7 @@ function detectSgrThreat(trickCardsWon: Record<string, Card[]>, playerId: string
 
   for (const [oppId, cards] of Object.entries(trickCardsWon)) {
     if (oppId === playerId) continue;
-    let oppPoints = 0;
-    for (const c of cards) {
-      if (c.suit === 'hearts') oppPoints += 1;
-      if (c.suit === 'spades' && c.rank === 12) oppPoints += 13;
-    }
+    const oppPoints = countPoints(cards);
     maxOpponentPoints = Math.max(maxOpponentPoints, oppPoints);
   }
 
@@ -248,7 +256,7 @@ function simulateTrick(
   // --- Leading ---
   if (!trick || trick.cards.length === 0) {
     if (card.suit === 'hearts' && !heartsBroken) score += 200;
-    if (card.suit === 'spades' && card.rank === 12) score += 100;
+    if (isQueenOfSpades(card)) score += 100;
     score += card.rank * 0.1;
 
     // Prefer leading from shorter suits (fewer unknown cards = safer)
@@ -270,13 +278,12 @@ function simulateTrick(
     const tempTrick: TrickState = {
       cards: allCards, leaderId: trick.leaderId, trickNumber: trick.trickNumber,
     };
-    const winner = trickWinner(tempTrick, new Map());
+    const winner = trickWinner(tempTrick);
 
     if (winner === 'me') {
       let points = 0;
       for (const c of allCards) {
-        if (c.card.suit === 'hearts') points += 1;
-        if (c.card.suit === 'spades' && c.card.rank === 12) points += 13;
+        points += cardPoints(c.card);
       }
       score = points * 10 + card.rank * 0.1;
       return score;
@@ -288,7 +295,7 @@ function simulateTrick(
   if (card.suit === 'hearts') {
     score = heartsBroken ? -3 : 8;
   }
-  if (card.suit === 'spades' && card.rank === 12) {
+  if (isQueenOfSpades(card)) {
     score = heartsBroken ? -20 : 10;
   }
   // Prefer dumping high non-scoring cards
@@ -314,7 +321,7 @@ function twoTrickLookahead(
   const tempTrick: TrickState = {
     cards: allCards, leaderId: trick.leaderId, trickNumber: trick.trickNumber,
   };
-  const winner = trickWinner(tempTrick, new Map());
+  const winner = trickWinner(tempTrick);
 
   if (winner !== 'me') return 0; // We lose, no lookahead needed
 
@@ -343,7 +350,7 @@ function adjustForScore(
 
   if (scoreSit.dangerLevel === 'critical') {
     if (card.suit === 'hearts' && !heartsBroken) adj += 80;
-    if (card.suit === 'spades' && card.rank === 12) adj += 40;
+    if (isQueenOfSpades(card)) adj += 40;
   }
 
   // If leading and game approaching, avoid any risk
@@ -354,7 +361,7 @@ function adjustForScore(
   // If behind and critical, try harder to dump hearts/Q♠
   if (!scoreSit.leading && scoreSit.dangerLevel === 'critical') {
     if (card.suit === 'hearts' && heartsBroken) adj -= 5;
-    if (card.suit === 'spades' && card.rank === 12 && heartsBroken) adj -= 10;
+    if (isQueenOfSpades(card) && heartsBroken) adj -= 10;
   }
 
   return adj;
@@ -363,8 +370,7 @@ function adjustForScore(
 // ========== SGR Defense Adjustments ==========
 
 function adjustForSgrDefense(
-  card: Card, trick: TrickState | null, sgrThreat: { threat: boolean; level: number },
-  scoreSit: ScoreSituation
+  card: Card, trick: TrickState | null, sgrThreat: { threat: boolean; level: number }
 ): number {
   if (!sgrThreat.threat) return 0;
 
@@ -378,7 +384,7 @@ function adjustForSgrDefense(
 
   // If we have scoring cards, prioritize dumping them
   if (card.suit === 'hearts' && trick && trick.cards.length > 0) adj -= 10;
-  if (card.suit === 'spades' && card.rank === 12 && trick && trick.cards.length > 0) adj -= 15;
+  if (isQueenOfSpades(card) && trick && trick.cards.length > 0) adj -= 15;
 
   return adj;
 }
@@ -401,7 +407,7 @@ function countSuitRemaining(hand: Card[], trick: TrickState | null, trickCardsWo
   for (const suit of ['hearts', 'diamonds', 'clubs', 'spades'] as Suit[]) {
     let count = 0;
     for (let rank = 2; rank <= 14; rank++) {
-      const id = `${suit}-${rank}`;
+      const id = cardId(suit, rank as Card['rank']);
       if (!selfIds.has(id) && !visible.has(id)) count++;
     }
     counts.set(suit, count);
