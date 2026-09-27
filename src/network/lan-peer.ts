@@ -462,9 +462,10 @@ export class LanPeerManager {
     if (!isTypedMessage(data)) return;
     console.log('[LAN-HOST] handleGuestMessage received:', data.type, 'from:', peerId,
       'payload:', JSON.stringify(data.payload ?? data).slice(0, 200));
-    if (data.type === 'join') {
-      console.log(`[LAN-HOST] Guest "${(data.payload as { name?: string } | undefined)?.name}" joined`);
-    } else if (data.type === 'play-card' || data.type === 'pass-card') {
+    // Guests only ever send play/pass intents over the data channel. Their
+    // arrival is announced on the signalling socket instead (the JOIN handler
+    // in initAsHost), so there is no 'join' case to handle here.
+    if (data.type === 'play-card' || data.type === 'pass-card') {
       this.emit('data-received', { from: peerId, payload: (data.payload ?? data) as ReceivedMessage['payload'] });
     }
   }
