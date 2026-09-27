@@ -11,10 +11,15 @@
 - **github.com 直连是间歇性的**：`git ls-remote` / `fetch`（GET）有时通、有时 443 超时；
   **push（POST）几乎必失败**——`Recv failure: Connection was reset`。
   不要因为一次 ls-remote 成功就断定能推送。`curl https://github.com` 一直返回 000，不能作为判据。
-- **推送目前卡在凭据，不是网络**：`credential.helper = manager`（GCM），
-  但 Windows 凭据库里**没有 github.com 条目**（`cmdkey /list` 为空），
-  非交互模式下 GCM 无法弹窗 → `could not read Username for 'https://github.com'`。
-  `gh` 未安装，所以上一轮记忆里"用 gh auth token 拼 URL"的办法现在用不了。
+- **推送需要 PAT**：`credential.helper = manager`（GCM）但 Windows 凭据库里**没有**
+  github.com 条目（`cmdkey /list` 为空），`gh` 也未安装，非交互模式下 GCM 弹不出窗。
+  实测可用方式——用环境变量传令牌 + 一次性 helper（**不落盘、不进 `ps`、不改 remote**）：
+  ```
+  export GH_TOKEN='<pat>'
+  git -c credential.helper='!f() { echo username=x-access-token; echo "password=$GH_TOKEN"; }; f' \
+      -c http.postBuffer=524288000 -c http.lowSpeedLimit=0 push origin master
+  ```
+  **失败要重试**：连不上是常态，实测第 3 次才成功。别因为 1~2 次失败就放弃。
 - 只读镜像 `https://ghfast.top/` 可用（前缀式：`https://ghfast.top/https://github.com/...`），
   适合 clone/fetch。**不要把凭据经第三方镜像推送。**
 - npm 源已在仓库 `.npmrc` 里配好 npmmirror，无需手动改
