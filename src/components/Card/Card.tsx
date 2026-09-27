@@ -11,7 +11,6 @@ interface CardComponentProps {
   small?: boolean;
   /** Minimum size floor in pixels (for very compact screens) */
   minPx?: number;
-  animate?: boolean;
   /** Accessibility label */
   ariaLabel?: string;
   /** Keyboard handler */
@@ -51,7 +50,6 @@ const CardComponent: React.FC<CardComponentProps> = memo(({
   disabled = false,
   small = false,
   minPx = 48,
-  animate = true,
   ariaLabel,
   onKeyDown,
   tabIndex = 0,

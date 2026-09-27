@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 
 interface LanLobbyProps {
   roomId: string;
-  playerName: string;
   isHost: boolean;
   players: { id: string; name: string; isAi: boolean }[];
   onReady?: () => void;
@@ -17,7 +16,6 @@ interface LanLobbyProps {
 
 const LanLobby: React.FC<LanLobbyProps> = memo(({
   roomId,
-  playerName,
   isHost,
   players,
   onReady,
@@ -53,16 +51,14 @@ const LanLobby: React.FC<LanLobbyProps> = memo(({
   const subtitleSize = isPhone ? 'text-[10px]' : 'text-xs';
   const labelSize = isPhone ? 'text-[9px]' : 'text-xs';
   const roomCodeSize = isPhone ? 'text-2xl' : 'text-3xl';
-  const playerItemPadding = isPhone ? 'px-2 py-1.5' : 'px-3 py-2';
   const metaSize = isPhone ? 'text-[9px]' : 'text-xs';
 
   // Player slots: up to 4 positions
   const slots = Array.from({ length: 4 }, (_, i) => {
     const p = players[i];
-    const isHuman = !p || p.name === playerName;
     return p
-      ? { id: p.id, name: p.name, isAi: p.isAi, occupied: true }
-      : { id: `slot-${i}`, name: '', isAi: false, occupied: false };
+      ? { name: p.name, isAi: p.isAi, occupied: true }
+      : { name: '', isAi: false, occupied: false };
   });
 
   const aiCount = players.filter(p => p.isAi).length;
@@ -82,7 +78,6 @@ const LanLobby: React.FC<LanLobbyProps> = memo(({
   const slotBg = isClassic ? 'rgba(46,204,113,0.08)' : 'rgba(139,92,246,0.1)';
   const slotBorder = isClassic ? 'rgba(46,204,113,0.2)' : 'rgba(139,92,246,0.2)';
   const emptySlotBorder = isClassic ? 'rgba(0,0,0,0.15)' : 'rgba(255,255,255,0.1)';
-  const accentColor = isClassic ? '#2ecc71' : '#8b5cf6';
   const accentGlow = isClassic ? 'rgba(46,204,113,0.25)' : 'rgba(139,92,246,0.25)';
 
   return (
@@ -171,7 +166,7 @@ const LanLobby: React.FC<LanLobbyProps> = memo(({
           <div className="space-y-1.5">
             {slots.map((slot, idx) => (
               <motion.div
-                key={slot.id}
+                key={`slot-${idx}`}
                 className="flex items-center gap-2.5 rounded-lg px-3 py-2"
                 style={{
                   background: slot.occupied ? slotBg : inputBg,

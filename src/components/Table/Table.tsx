@@ -1,6 +1,7 @@
 import React, { useState, useEffect, memo, useRef } from 'react';
 import { CardComponent } from '../Card/Card';
 import type { TrickState, Card } from '../../game/types';
+import { cardPoints } from '../../game/deck';
 
 interface TableProps {
   trick: TrickState | null;
@@ -10,8 +11,6 @@ interface TableProps {
   aiHands?: Map<string, Card[]>;
   // Responsive params (computed in App)
   aiCardMinPx: number;
-  cardW: number;
-  cardH: number;
   aiHandOffset: number;
   trickOverlapBase: number;
   trickOverlapStep: number;
@@ -28,7 +27,7 @@ interface TableProps {
 
 const Table: React.FC<TableProps> = memo(({
   trick, currentPlayerId, humanPlayerId, players, aiHands = new Map(),
-  aiCardMinPx, cardW, cardH, aiHandOffset,
+  aiCardMinPx, aiHandOffset,
   trickOverlapBase, trickOverlapStep, badgeOff, badgeFontSizePx, scoreFontSizePx,
   fanStepX, fanStepY, trickCardMinPx,
   turnStatus,
@@ -78,13 +77,11 @@ const Table: React.FC<TableProps> = memo(({
   const leftFanH = (13 - 1) * fanStepY + aiCardH;
   const leftHandLeft = aiHandOffset;
   const leftHandTop = (ch - leftFanH) / 2;
-  const leftHandBottom = leftHandTop + leftFanH;
   const leftHandRight = leftHandLeft + aiCardW;
 
   // Right AI hand: vertical fan, inset from right edge
   const rightHandLeft = cw - aiCardW - aiHandOffset;
   const rightHandTop = (ch - leftFanH) / 2;
-  const rightHandBottom = rightHandTop + leftFanH;
 
   // Table fills the space between AI hands
   const tableLeft = leftHandRight;
@@ -103,11 +100,9 @@ const Table: React.FC<TableProps> = memo(({
   return (
     <div ref={containerRef} className="relative w-full h-full overflow-visible" role="application" aria-label="扑克牌桌">
       {/* ── AI Hands ─────────────────────────────────────────────── */}
-      {(() => {
-        let globalCardIndex = 0;
-        return players.map((player, idx) => {
-          if (!player.isAi) return null;
-          const settlement = settlementCards?.[player.id]?.filter(c => c.suit === 'hearts' || (c.suit === 'spades' && c.rank === 12)) || [];
+      {players.map((player, idx) => {
+        if (!player.isAi) return null;
+          const settlement = settlementCards?.[player.id]?.filter(c => cardPoints(c) > 0) || [];
           const aiCards = settlement.length > 0 ? settlement : (aiHands instanceof Map ? aiHands.get(player.id) : undefined) || [];
           const displayCount = aiCards.length > 0 ? aiCards.length : 0;
           const side = sideForIdx(idx);
@@ -159,7 +154,6 @@ const Table: React.FC<TableProps> = memo(({
                       faceDown={settlement.length === 0}
                       small
                       minPx={aiCardMinPx}
-                      animate={false}
                       ariaLabel={`${player.name} 的一张背面牌`}
                     />
                   </div>
@@ -167,8 +161,7 @@ const Table: React.FC<TableProps> = memo(({
               })}
             </div>
           );
-        });
-      })()}
+      })}
 
       {/* ── Badges ───────────────────────────────────────────────── */}
       {players.map((player, idx) => {
