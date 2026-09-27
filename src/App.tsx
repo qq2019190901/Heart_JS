@@ -540,6 +540,10 @@ function App() {
       // Guard: ignore plays during the 1-second trick-completion grace period
       if (state.trickJustCompleted) return;
 
+      // Only the player whose turn it is may act — otherwise a guest could play
+      // out of turn, or move another seat's cards on its behalf.
+      if (state.currentPlayerId !== senderId) return;
+
       // Validate: reject illegal cards (don't follow suit, miss 2♣, etc.)
       const hand = state.hands.get(senderId) || [];
       const hb = heartsAreBroken(state.hands, state.highestHeart);
