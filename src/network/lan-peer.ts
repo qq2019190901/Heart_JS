@@ -68,6 +68,12 @@ export class LanPeerManager {
    * the 'close' events from the connections we just closed arrive asynchronously.
    */
   private _intentionalDisconnect = false;
+  /**
+   * True once the server address has been configured explicitly (join form, URL
+   * hash or native bridge). Used to keep the Android bridge's own-port fallback
+   * from overriding a port the user actually chose — see _initAsClientInner.
+   */
+  private _portExplicit = false;
 
   /** Detect if running inside Capacitor/Android WebView */
   detectAndroid(): boolean {
@@ -148,6 +154,7 @@ export class LanPeerManager {
    */
   setServerConfig(config: LanServerConfig): void {
     this.serverConfigInternal = config;
+    this._portExplicit = true;
     LanPeerManager.saveServer(config.host, config.port);
   }
 
@@ -356,7 +363,12 @@ export class LanPeerManager {
           'AndroidBridge?.getServerPort()=', window.AndroidBridge ? window.AndroidBridge.getServerPort() : 'N/A',
           'AndroidBridge?.getLocalIp()=', window.AndroidBridge ? window.AndroidBridge.getLocalIp() : 'N/A');
 
-        if (nativePort > 0) {
+        if (nativePort > 0 && !this._portExplicit) {
+          // Fallback only. `nativePort` is THIS device's own server port, but when
+          // joining a room the port belongs to the HOST — and the two phones can
+          // end up on different ports (e.g. 9000 already taken on one of them).
+          // Overriding unconditionally would silently send the guest to the wrong
+          // port while the join form's port field looked like it was honoured.
           this.serverConfigInternal = { ...this.serverConfigInternal, port: nativePort };
           this._serverPort = nativePort;
         }
