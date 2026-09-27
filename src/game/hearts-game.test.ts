@@ -57,7 +57,7 @@ describe('startRound', () => {
     ];
     const state = createInitialState(players);
     const roundState = startRound(state);
-    const hasTwoOfClubs = Array.from(roundState.hands.entries()).some(([pid, cards]) =>
+    const hasTwoOfClubs = Array.from(roundState.hands.values()).some(cards =>
       cards.some(c => c.suit === 'clubs' && c.rank === 2)
     );
     expect(hasTwoOfClubs).toBe(true);

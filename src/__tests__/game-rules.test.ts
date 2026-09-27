@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createDeck, dealCards } from '../game/deck';
 import { canPlayCard, heartsAreBroken, trickWinner, getAllPlayableCards } from '../game/rules';
 import { createInitialState, startRound, playCard } from '../game/hearts-game';
-import type { Card, GameState, TrickState, Suit, Rank } from '../game/types';
+import type { Card, TrickState, Suit, Rank } from '../game/types';
 
 // ===== Helper: create a card =====
 function card(suit: Suit, rank: Rank): Card {
@@ -83,7 +83,7 @@ describe('canPlayCard', () => {
 describe('heartsAreBroken', () => {
   it('returns true if highestHeart is set', () => {
     const h = handsMap([]);
-    expect(heartsAreBroken(h, { suit: 'hearts' as any, rank: 5 as any, id: 'test' })).toBe(true);
+    expect(heartsAreBroken(h, card('hearts', 5))).toBe(true);
   });
 
   it('returns false if no heart has been broken', () => {
@@ -104,7 +104,7 @@ describe('trickWinner', () => {
       leaderId: 'p0',
       trickNumber: 1,
     };
-    expect(trickWinner(trick, new Map())).toBe('p1');
+    expect(trickWinner(trick)).toBe('p1');
   });
 });
 

@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { getAiDecision } from '../game/ai';
-import { createDeck, dealCards } from '../game/deck';
 import { createInitialState, startRound } from '../game/hearts-game';
 import type { Card, TrickState, Suit, Rank, Player } from '../game/types';
 

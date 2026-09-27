@@ -1,10 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import { createDeck, shuffleDeck } from './deck';
 import { canPlayCard, heartsAreBroken, trickWinner, calculateRoundPoints, getAllPlayableCards, getLeadSuit, isShotGunTheRose } from './rules';
-import type { Card, TrickState } from './types';
+import type { Card, TrickState, Suit, Rank } from './types';
 
-function makeCard(suit: string, rank: number): Card {
-  return { suit: suit as any, rank: rank as any, id: `${suit}-${rank}` };
+/** Build a card from a numeric rank (2–14), narrowing to the `Rank` union. */
+function makeCard(suit: Suit, rank: number): Card {
+  return { suit, rank: rank as Rank, id: `${suit}-${rank}` };
+}
+
+/** The thirteen hearts, 2 through Ace. */
+function allHearts(): Card[] {
+  return Array.from({ length: 13 }, (_, i) => makeCard('hearts', i + 2));
 }
 
 describe('Deck', () => {
@@ -83,13 +89,13 @@ describe('canPlayCard', () => {
 
 describe('heartsAreBroken', () => {
   it('returns false when highestHeart is null', () => {
-    const hands = new Map<string, any[]>([]);
+    const hands = new Map<string, Card[]>([]);
     expect(heartsAreBroken(hands, null)).toBe(false);
   });
 
   it('returns true when highestHeart is set', () => {
-    const hands = new Map<string, any[]>([]);
-    expect(heartsAreBroken(hands, { suit: 'hearts', rank: 5, id: 'test' })).toBe(true);
+    const hands = new Map<string, Card[]>([]);
+    expect(heartsAreBroken(hands, makeCard('hearts', 5))).toBe(true);
   });
 });
 
@@ -105,7 +111,7 @@ describe('trickWinner', () => {
       leaderId: 'p1',
       trickNumber: 1,
     };
-    expect(trickWinner(trick, new Map())).toBe('p2');
+    expect(trickWinner(trick)).toBe('p2');
   });
 
   it('handles all same suit', () => {
@@ -119,7 +125,7 @@ describe('trickWinner', () => {
       leaderId: 'p1',
       trickNumber: 1,
     };
-    expect(trickWinner(trick, new Map())).toBe('p2');
+    expect(trickWinner(trick)).toBe('p2');
   });
 });
 
@@ -166,10 +172,9 @@ describe('getLeadSuit', () => {
 
 describe('isShotGunTheRose', () => {
   it('detects SGR with Map input', () => {
-    const heartsCards = Array.from({ length: 13 }, (_, i) => makeCard('hearts', i + 2));
     const qsCard = makeCard('spades', 12);
     const hands = new Map([
-      ['p1', [...heartsCards, qsCard]],
+      ['p1', [...allHearts(), qsCard]],
       ['p2', [makeCard('clubs', 2)]],
     ]);
     const result = isShotGunTheRose(hands);
@@ -178,10 +183,9 @@ describe('isShotGunTheRose', () => {
   });
 
   it('detects SGR with plain object input', () => {
-    const heartsCards = Array.from({ length: 13 }, (_, i) => makeCard('hearts', i + 2));
     const qsCard = makeCard('spades', 12);
     const trickCardsWon: Record<string, Card[]> = {
-      p1: [...heartsCards, qsCard],
+      p1: [...allHearts(), qsCard],
       p2: [makeCard('clubs', 2)],
     };
     const result = isShotGunTheRose(trickCardsWon);
@@ -208,9 +212,8 @@ describe('isShotGunTheRose', () => {
   });
 
   it('returns false when not all spade queens present', () => {
-    const heartsCards = Array.from({ length: 13 }, (_, i) => makeCard('hearts', i + 2));
     const hands = new Map([
-      ['p1', heartsCards],
+      ['p1', allHearts()],
       ['p2', [makeCard('spades', 12)]],
     ]);
     const result = isShotGunTheRose(hands);
