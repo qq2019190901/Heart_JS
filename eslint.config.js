@@ -6,7 +6,17 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores([
+    'dist',
+    'dist-electron',
+    '_staging',
+    '_build',
+    'release',
+    'node_modules',
+    // Android build output and generated assets — not source.
+    'android/**/build',
+    'android/app/src/main/assets/public',
+  ]),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -17,6 +27,13 @@ export default defineConfig([
     ],
     languageOptions: {
       globals: globals.browser,
+    },
+  },
+  {
+    // Node-side scripts and Electron main process use Node globals.
+    files: ['electron/**/*.ts', 'scripts/**/*.js', '*.js'],
+    languageOptions: {
+      globals: { ...globals.node },
     },
   },
 ])
