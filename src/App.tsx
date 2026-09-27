@@ -150,6 +150,11 @@ function App() {
         const cardIds = readCardIds(data) ?? [];
         const hand = state.hands.get(from) || [];
         const cardsToPass = hand.filter(c => cardIds.includes(c.id));
+        // Reject unknown senders and incomplete submissions. Writing the result
+        // unconditionally would let an empty or partial list clobber the pass the
+        // deal already prepared for this seat, silently corrupting the round.
+        const expected = (state.passedCards[from] || []).length;
+        if (expected === 0 || cardsToPass.length !== expected) return;
         lanPeer.clientPasses = { ...lanPeer.clientPasses, [from]: cardsToPass };
         lanPassConfirmedRef.current.add(from);
         checkLanPassComplete();
