@@ -869,6 +869,7 @@ function App() {
         status={lanStatus}
         errorMessage={lanErrorMessage}
         serverHost={lanPeer.serverConfig.host}
+        serverPort={lanPeer.serverPort}
         theme={theme}
       />
     );

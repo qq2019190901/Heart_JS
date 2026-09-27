@@ -11,6 +11,7 @@ interface LanLobbyProps {
   status: 'waiting' | 'ready' | 'connecting' | 'error';
   errorMessage?: string;
   serverHost?: string;
+  serverPort?: number;
   theme?: 'classic' | 'modern';
 }
 
@@ -24,6 +25,7 @@ const LanLobby: React.FC<LanLobbyProps> = memo(({
   status,
   errorMessage,
   serverHost,
+  serverPort,
   theme = 'classic',
 }) => {
   const [copied, setCopied] = useState(false);
@@ -154,7 +156,7 @@ const LanLobby: React.FC<LanLobbyProps> = memo(({
             </div>
             {serverHost && (
               <p className={`text-center mt-1.5 ${isPhone ? 'text-[8px]' : 'text-[10px]'}`} style={{ color: textSubtle }}>
-                连接地址：{serverHost}:9000
+                连接地址：{serverHost}:{serverPort ?? 9000}
               </p>
             )}
           </div>
