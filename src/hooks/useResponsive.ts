@@ -25,18 +25,23 @@ export interface ResponsiveScale {
  * - Card size is tied to viewport height (the constraining dimension in landscape)
  */
 /** Get viewport size in CSS pixels, unaffected by OS-level display scaling */
-function getCssViewportSize() {
+function getCssViewportSize(): { vw: number; vh: number; minDim: number; maxDim: number } {
   // visualViewport is not affected by OS zoom/DPI scaling — always CSS pixels
+  let vw: number;
+  let vh: number;
   if (window.visualViewport) {
-    return {
-      vw: Math.round(window.visualViewport.width),
-      vh: Math.round(window.visualViewport.height),
-    };
+    vw = Math.round(window.visualViewport.width);
+    vh = Math.round(window.visualViewport.height);
+  } else {
+    // Fallback for older browsers
+    vw = window.innerWidth;
+    vh = window.innerHeight;
   }
-  // Fallback for older browsers
   return {
-    vw: window.innerWidth,
-    vh: window.innerHeight,
+    vw,
+    vh,
+    minDim: Math.min(vw, vh),
+    maxDim: Math.max(vw, vh),
   };
 }
 
@@ -63,11 +68,11 @@ export function useResponsive(): ResponsiveScale {
   return useMemo(() => computeResponsiveScale(dims), [dims]);
 }
 
-function computeResponsiveScale(dims: { vw: number; vh: number; minDim: number; maxDim: number }): ResponsiveScale {
+export function computeResponsiveScale(dims: { vw: number; vh: number; minDim: number; maxDim: number }): ResponsiveScale {
   const { vw, vh, minDim, maxDim } = dims;
   const aspectRatio = vw / vh;
 
-  let cardScale = 1.0;
+  let cardScale: number;
   if (minDim < 400) cardScale = 0.5;
   else if (minDim < 500) cardScale = 0.5 + (minDim - 400) / 100 * (0.65 - 0.5);
   else if (minDim < 600) cardScale = 0.65 + (minDim - 500) / 100 * (0.8 - 0.65);
