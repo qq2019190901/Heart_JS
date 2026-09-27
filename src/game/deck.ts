@@ -17,11 +17,47 @@ const RANK_NAMES: Record<number, string> = {
   14: 'A',
 };
 
+/** The lowest club — the mandatory opening lead of every round. */
+export const TWO_OF_CLUBS: { suit: Suit; rank: Rank } = { suit: 'clubs', rank: 2 };
+
+/** The Queen of Spades — worth 13 points. */
+export const QUEEN_OF_SPADES: { suit: Suit; rank: Rank } = { suit: 'spades', rank: 12 };
+
+/**
+ * Canonical card ID. Every card in the deck is identified as `${suit}-${rank}`.
+ * Centralised here so consumers never have to re-derive the format by hand.
+ */
+export function cardId(suit: Suit, rank: Rank): string {
+  return `${suit}-${rank}`;
+}
+
+export function isTwoOfClubs(card: Card): boolean {
+  return card.suit === TWO_OF_CLUBS.suit && card.rank === TWO_OF_CLUBS.rank;
+}
+
+export function isQueenOfSpades(card: Card): boolean {
+  return card.suit === QUEEN_OF_SPADES.suit && card.rank === QUEEN_OF_SPADES.rank;
+}
+
+/** Hearts score 1 point each; the Queen of Spades scores 13. */
+export function cardPoints(card: Card): number {
+  if (card.suit === 'hearts') return 1;
+  if (isQueenOfSpades(card)) return 13;
+  return 0;
+}
+
+/** Total point value of a collection of cards. */
+export function countPoints(cards: Card[]): number {
+  let total = 0;
+  for (const c of cards) total += cardPoints(c);
+  return total;
+}
+
 export function createDeck(): Card[] {
   const deck: Card[] = [];
   for (const suit of SUITS) {
     for (const rank of RANKS) {
-      deck.push({ suit, rank, id: `${suit}-${rank}` });
+      deck.push({ suit, rank, id: cardId(suit, rank) });
     }
   }
   return deck;
