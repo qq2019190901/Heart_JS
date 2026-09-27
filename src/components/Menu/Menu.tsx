@@ -397,12 +397,11 @@ const Menu: React.FC<MenuProps> = memo(({
       )}
 
       {/* Exit button — Electron only */}
-      {(typeof (window as any).electronAPI !== 'undefined') && (
+      {(typeof window.electronAPI !== 'undefined') && (
         <motion.button
           className={`mt-3 text-white/40 hover:text-red-400 transition-colors z-10 ${isPhone ? 'text-[9px]' : isTablet ? 'text-xs' : 'text-xs sm:text-sm'}`}
           onClick={() => {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (window as any).electronAPI?.exit();
+            window.electronAPI?.exit();
           }}
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
