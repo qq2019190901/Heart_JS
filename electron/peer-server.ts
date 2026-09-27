@@ -8,17 +8,36 @@ import { WebSocketServer, WebSocket } from 'ws';
 
 const KEY = 'peerjs';
 
+/**
+ * A signaling message as received from a PeerJS client.
+ * The protocol is open-ended: WebRTC `offer`/`answer`/`candidate` payloads
+ * are forwarded verbatim, so unknown fields must survive the round trip.
+ */
+interface SignalMessage {
+  type: string;
+  dst?: string;
+  src?: string;
+  [key: string]: unknown;
+}
+
 class SimplePeerServer extends EventEmitter {
   private wss: WebSocketServer;
   private peers = new Map<string, WebSocket>();
   private queues = new Map<string, string[]>();
+  private actualPort = 0;
 
   constructor(server: http.Server, options: { path: string }) {
     super();
     const path = options.path || '/peerjs';
 
-    // Store actual listening port for client discovery
-    let actualPort = 0;
+    // Keep the reported port in sync with the socket the server is actually bound to
+    server.on('listening', () => {
+      const addr = server.address();
+      if (addr && typeof addr === 'object') {
+        this.actualPort = addr.port;
+        console.log(`[PeerServer] Listening on port ${this.actualPort}`);
+      }
+    });
 
     // Handle HTTP requests
     server.on('request', (req, res) => {
@@ -42,7 +61,7 @@ class SimplePeerServer extends EventEmitter {
       // Allow client to discover the actual server port
       if (url === '/peerjs/port' || url === path + '/port') {
         res.writeHead(200, { 'Content-Type': 'application/json', ...corsHeaders });
-        res.end(JSON.stringify({ port: actualPort }));
+        res.end(JSON.stringify({ port: this.actualPort }));
         return;
       }
 
@@ -147,7 +166,7 @@ class SimplePeerServer extends EventEmitter {
     });
   }
 
-  private handleMessage(msg: any, srcId: string, srcConn: WebSocket) {
+  private handleMessage(msg: SignalMessage, srcId: string, srcConn: WebSocket) {
     const type = msg.type;
     const dst = msg.dst;
 
@@ -195,7 +214,7 @@ class SimplePeerServer extends EventEmitter {
     }
   }
 
-  private forwardMessage(dstId: string, srcId: string, msg: any) {
+  private forwardMessage(dstId: string, srcId: string, msg: SignalMessage) {
     const target = this.peers.get(dstId);
     if (target?.readyState === WebSocket.OPEN) {
       const forwarded = { ...msg, src: srcId };
@@ -209,14 +228,23 @@ class SimplePeerServer extends EventEmitter {
     }
   }
 
-  /** Notify callback when server starts listening on a port */
+  /** Invoke `callback` with the port as soon as it is known. */
   onListening(callback: (port: number) => void): void {
-    // Hook into server's 'listening' event — caller must set this before start
+    if (this.actualPort > 0) {
+      callback(this.actualPort);
+      return;
+    }
+    this.once('listening', callback);
   }
 
   setPort(port: number): void {
-    // Called by main.ts after server starts listening
+    // Called by main.ts once the HTTP server is bound to a real port.
+    this.actualPort = port;
     console.log(`[PeerServer] Port set to ${port}`);
+  }
+
+  get port(): number {
+    return this.actualPort;
   }
 
   stop(): void {
