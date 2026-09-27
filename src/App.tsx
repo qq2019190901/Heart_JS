@@ -510,6 +510,11 @@ function App() {
       const newState = playCard(latestState, latestDecision.playerId, latestDecision.cardId);
       setGameState(newState);
       if (lanIsHostRef.current) lanPeer.broadcast(newState);
+      // Release the "AI thinking" lock as soon as the card has landed. In LAN
+      // mode the host's own click never reaches handleCardClick (the only other
+      // place that clears this flag), so leaving it set would latch it true
+      // after the first AI turn and permanently disable the host's hand.
+      setWaitingForAi(false);
       if (newState.phase === 'roundOver') setRoundOver(true);
       else if (newState.phase === 'gameOver') setGameOver(true);
     }, decision.delay);
@@ -590,6 +595,11 @@ function App() {
       setWaitingForAi(true);
       const newState = playCard(latestState, latestDecision.playerId, latestDecision.cardId);
       setGameState(newState);
+      // Release the "AI thinking" lock once the card has landed. The effect
+      // bails out early on a human's turn, so nothing else would clear this
+      // flag — leaving it set hides "轮到你了！" and keeps the human's hand
+      // disabled, deadlocking the round.
+      setWaitingForAi(false);
       if (newState.phase === 'roundOver') setRoundOver(true);
       else if (newState.phase === 'gameOver') setGameOver(true);
     }, decision.delay);
