@@ -740,9 +740,12 @@ function App() {
 
     const newState = playCard(state, humanId, card.id);
     setGameState(newState);
+    // In LAN mode the host is the authority, so its own play has to be pushed to
+    // the guests as well (single-player has no peers to notify).
+    if (mode === 'lan' && lanIsHostRef.current) lanPeer.broadcast(newState);
     if (newState.phase === 'roundOver') setRoundOver(true);
     else if (newState.phase === 'gameOver') setGameOver(true);
-  }, [humanId, waitingForAi]);
+  }, [humanId, waitingForAi, mode]);
 
   // ========== Common: Continue / Restart ==========
 
@@ -1191,7 +1194,14 @@ function App() {
                         if (mode === 'lan') {
                           // Guard against playing during trick-completion grace period
                           if (gameStateRef.current?.trickJustCompleted) return;
-                          lanPeer.sendToHost('play-card', { cardId: card.id, type: 'play-card' });
+                          if (lanIsHostRef.current) {
+                            // The host owns the authoritative state: apply the play
+                            // locally (handleCardClick broadcasts it). sendToHost()
+                            // is a no-op for the host role and would silently drop it.
+                            handleCardClick(card);
+                          } else {
+                            lanPeer.sendToHost('play-card', { cardId: card.id, type: 'play-card' });
+                          }
                         } else {
                           handleCardClick(card);
                         }
