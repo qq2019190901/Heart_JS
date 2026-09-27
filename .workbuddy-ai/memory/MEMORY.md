@@ -37,6 +37,22 @@ git -c user.name="Claude Code" -c user.email="claude@anthropic.com" commit -m ".
 - `npm run dev` — Vite 开发服务器（默认 5173）
 - `npm run build` / `npm run dist:electron` / `npm run apk`
 
+## Android 构建（工具链已装在 D:/dev-tools）
+`dl.google.com` / `services.gradle.org` / `repo.maven.apache.org` 都被墙，全部走镜像装好了：
+JDK 21（清华 TUNA Adoptium）、Gradle 8.13（腾讯）、SDK 36（腾讯 AndroidSDK 镜像）。
+`~/.gradle/init.gradle` 把仓库重定向到阿里云；`android/local.properties` 指向 SDK。
+```
+npm run build && npx cap sync android
+JAVA_HOME=D:\dev-tools\jdk-21 ANDROID_HOME=D:\dev-tools\android-sdk \
+  D:\dev-tools\gradle-8.13\bin\gradle.bat assembleDebug
+```
+**用 assembleDebug**：release 签名要 `heart-js-keystore.keystore`，本地没有。
+详细步骤、坑和验证手段见 `.workbuddy-ai/memory/2026-09-27.md` 第（七）节。
+
+⚠️ **cap sync 在本机第二次起会失败**（沙箱 safe-delete shim 拦批量删除，绕不过）。
+绕法：不删、直接 `cp -rf dist/. android/app/src/main/assets/public/` 覆盖，再手写
+`assets/capacitor.config.json`。旧的 hash bundle 会残留在 APK 里。
+
 ## 联机模式的核心不变量（改 LAN 相关代码前必读）
 **只有房主可以修改权威 GameState；客户端只上行意图、只渲染广播。**
 `src/App.tsx` 里几乎所有 effect 都会在两端各跑一遍，很容易违反这条不变量。
