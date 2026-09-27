@@ -619,6 +619,11 @@ function App() {
 
   useEffect(() => {
     if (!gameState || gameState.phase !== 'dealing') return;
+    // LAN guests must not deal locally. The shuffle runs on the host, which then
+    // broadcasts the resulting hands; if the guest shuffled its own copy of the
+    // deck the two sides would end up holding completely different cards, and
+    // every card the guest tried to pass or play would be rejected as "not in hand".
+    if (mode === 'lan' && !lanIsHostRef.current) return;
     if (isDealingRef.current) return;
 
     isDealingRef.current = true;
