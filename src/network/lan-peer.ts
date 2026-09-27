@@ -59,6 +59,15 @@ export class LanPeerManager {
   private _androidLocalIp: string = '';
   private _lanClientPasses: Record<string, Card[]> = {};
   private _isAndroid = false;
+  /**
+   * Set while disconnect() is tearing the session down on purpose. The host
+   * connection's 'close' handler must not report an error in that case —
+   * leaving a room is not a failure.
+   *
+   * Stays true until the next session starts (initAsHost / initAsClient), since
+   * the 'close' events from the connections we just closed arrive asynchronously.
+   */
+  private _intentionalDisconnect = false;
 
   /** Detect if running inside Capacitor/Android WebView */
   detectAndroid(): boolean {
@@ -208,6 +217,7 @@ export class LanPeerManager {
     }
     return new Promise((resolve, reject) => {
       this._role = 'host';
+      this._intentionalDisconnect = false;
       const opts = this.getPeerOptions();
       const peerOptions = { ...opts, debug: 0, config: { iceServers: [] } };
       // With a desired ID, request it explicitly; otherwise omit the ID so the
@@ -312,6 +322,7 @@ export class LanPeerManager {
     return new Promise((resolve) => {
       this._role = 'client';
       this._roomId = hostId;
+      this._intentionalDisconnect = false;
 
       // Clean up old peer before creating a new one
       if (this.peer) {
@@ -483,7 +494,8 @@ export class LanPeerManager {
     conn.on('close', () => {
       console.log('[LAN-CLIENT] Host connection closed');
       this.connected = false;
-      this.emit('connection-error', {});
+      // A deliberate leave (disconnect()) must not surface as a connection error.
+      if (!this._intentionalDisconnect) this.emit('connection-error', {});
     });
   }
 
@@ -564,6 +576,9 @@ export class LanPeerManager {
   }
 
   disconnect(): void {
+    // Mark the teardown as deliberate before closing anything, so the pending
+    // 'close' events don't get reported as connection errors.
+    this._intentionalDisconnect = true;
     if (this.hostConn) {
       try { this.hostConn.close(); } catch (err) { console.warn('[LAN-CLIENT] hostConn.close failed:', err); }
       this.hostConn = null;

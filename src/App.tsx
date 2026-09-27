@@ -225,7 +225,9 @@ function App() {
 
     const onConnectionError = () => {
       setLanStatus('error');
-      setLanErrorMessage('连接错误，请重试');
+      // Fired when an established link drops, which is a disconnect rather than
+      // a failed attempt — the join path reports its own, more specific errors.
+      setLanErrorMessage('连接已断开，请重试');
     };
 
     lanPeer.on('data-received', onDataReceived);
