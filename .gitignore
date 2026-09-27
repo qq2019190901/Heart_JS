@@ -35,6 +35,10 @@ main.js
 tsconfig.electron.tsbuildinfo
 *.jar
 *.png
+# ...but Android launcher / splash artwork must be tracked. The broad *.png rule
+# above was silently excluding required resources (splash, ic_launcher_foreground),
+# which made a fresh clone unable to link resources at all.
+!android/app/src/main/res/**/*.png
 heart-js-keystore.keystore
 
 # Build temp directories
