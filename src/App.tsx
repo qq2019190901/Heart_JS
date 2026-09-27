@@ -32,7 +32,6 @@ function App() {
   const [gameOver, setGameOver] = useState(false);
   const [playerName] = useState('玩家');
   const [waitingForAi, setWaitingForAi] = useState(false);
-  const [showPassUI, setShowPassUI] = useState(false);
   const [selectedPassCardIds, setSelectedPassCardIds] = useState<Set<string>>(new Set());
   const [aiDifficulties, setAiDifficulties] = useState<Record<string, 'easy' | 'medium' | 'hard'>>(() => {
     try {
@@ -169,8 +168,6 @@ function App() {
           const myPlayer = state.players.find((p: Player) => p.id === lanPlayerIdRef.current);
           if (myPlayer) setHumanId(myPlayer.id);
         }
-        if (state.phase === 'passing') setShowPassUI(true);
-        else if (state.phase === 'playing') setShowPassUI(false);
         if (state.phase === 'passing' || state.phase === 'playing') {
           setRoundOver(false);
           setGameOver(false);
@@ -257,7 +254,6 @@ function App() {
 
     const finalState = applyCardPass(updatedState);
     setGameState(finalState);
-    setShowPassUI(false);
     setLanPassSending(false);
     setLanClientSentPass(false);
     lanPeer.broadcast(finalState);
@@ -272,7 +268,6 @@ function App() {
     setGameState(null);
     setRoundOver(false);
     setGameOver(false);
-    setShowPassUI(false);
     setSelectedPassCardIds(new Set());
 
     setLanConnected(true);
@@ -306,7 +301,6 @@ function App() {
     setGameState(null);
     setRoundOver(false);
     setGameOver(false);
-    setShowPassUI(false);
     setSelectedPassCardIds(new Set());
     setLanConnected(true);
     setLanStatus('connecting');
@@ -412,15 +406,11 @@ function App() {
     setGameState(null);
     setRoundOver(false);
     setGameOver(false);
-    setShowPassUI(false);
     setSelectedPassCardIds(new Set());
     setMode(null);
   }, []);
 
   // ========== Safe hand gap (must be before conditional returns — hooks rule) ==========
-
-  // Must be defined here for hooks ordering (before any conditional returns)
-  const humanHandLen = gameState ? (gameState.hands?.get(humanId) || []).length : 0;
 
   // ═══════════════════════════════════════════════════════════
   // TABLE RESPONSIVE PARAMS — computed here, passed to Table
@@ -679,7 +669,6 @@ function App() {
             if (finalState.passedDirections[finalState.players[0].id] === 'none') {
               setGameState(applyCardPass(finalState));
             } else {
-              setShowPassUI(true);
               setSelectedPassCardIds(new Set());
             }
             if (mode === 'lan') {
@@ -765,7 +754,6 @@ function App() {
     setGameState(newState);
     setRoundOver(false);
     setGameOver(false);
-    setShowPassUI(false);
     setSelectedPassCardIds(new Set());
     // Broadcast to LAN clients if host
     if (mode === 'lan' && lanIsHostRef.current) {
@@ -821,7 +809,6 @@ function App() {
     setGameState(newState);
     setRoundOver(false);
     setGameOver(false);
-    setShowPassUI(false);
     setSelectedPassCardIds(new Set());
   }, [gameState]);
 
