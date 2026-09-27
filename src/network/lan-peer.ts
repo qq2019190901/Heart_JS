@@ -230,12 +230,6 @@ export class LanPeerManager {
         this._myId = id;
         this._roomId = id;
         this.connected = true;
-        // Persist actual server port for clients to read
-        try {
-          localStorage.setItem('heart-lan-server-port', String(this._serverPort));
-        } catch (err) {
-          console.warn('[LAN-HOST] Could not persist server port:', err);
-        }
         const note = desiredId && id !== desiredId
           ? ` (requested ${desiredId}, got ${id})`
           : '';
@@ -337,9 +331,8 @@ export class LanPeerManager {
       // Auto-detect server: URL hash > Android native bridge > localStorage > default
       const urlServer = LanPeerManager.getServerFromUrl();
       const savedServer = LanPeerManager.getSavedServer();
-      const savedPort = parseInt(localStorage.getItem('heart-lan-server-port') || '', 10);
       console.log('[LAN-CLIENT] initAsClient: isElectron=', !!window.electronAPI,
-        'urlServer=', urlServer, 'savedServer=', savedServer, 'savedPort=', savedPort,
+        'urlServer=', urlServer, 'savedServer=', savedServer,
         'currentConfig=', this.serverConfigInternal, 'android=', this._isAndroid);
 
       if (urlServer) {
@@ -379,12 +372,10 @@ export class LanPeerManager {
         console.log('[LAN-CLIENT] Using saved server config:', this.serverConfigInternal);
       }
 
-      // If we have a saved actual port from a previous host session, prefer it
-      if (savedPort > 0 && savedPort !== this.serverConfigInternal.port) {
-        console.log(`[LAN-CLIENT] Using saved actual port: ${savedPort}`);
-        this.serverConfigInternal = { ...this.serverConfigInternal, port: savedPort };
-        this._serverPort = savedPort;
-      }
+      // NOTE: the port is never read back from localStorage. An explicit value
+      // (URL hash, native bridge, or the join form) is the only source of truth —
+      // a cached port would override what the user just typed, and on a shared
+      // origin it leaks between tabs.
 
       // LAN mode: disable ICE to avoid STUN interference
       const peerOptions = {
@@ -596,12 +587,6 @@ export class LanPeerManager {
     this._myId = '';
     this._roomId = '';
     this._lanClientPasses = {};
-    // Clear saved port on disconnect
-    try {
-      localStorage.removeItem('heart-lan-server-port');
-    } catch (err) {
-      console.warn('[LAN] Could not clear saved server port:', err);
-    }
   }
 
   on(event: LanEvent, callback: (data: LanEventPayload) => void): void {
