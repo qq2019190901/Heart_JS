@@ -7,10 +7,16 @@
 
 **开工前先读它们。** 本文件只记录 AI 侧的操作性知识，不重复其内容。
 
-## 本机网络约定（重要）
-- **github.com 直连不通**（443 超时）。GitHub 相关操作走镜像 `https://ghfast.top/`：
-  `git clone https://ghfast.top/https://github.com/<owner>/<repo>.git`
-- 仓库 remote：`origin` = ghfast 镜像（可用）；`github` = 原始地址（备用，暂不可达）
+## 本机网络约定（重要，2026-09-27 实测修正）
+- **github.com 直连是间歇性的**：`git ls-remote` / `fetch`（GET）有时通、有时 443 超时；
+  **push（POST）几乎必失败**——`Recv failure: Connection was reset`。
+  不要因为一次 ls-remote 成功就断定能推送。`curl https://github.com` 一直返回 000，不能作为判据。
+- **推送目前卡在凭据，不是网络**：`credential.helper = manager`（GCM），
+  但 Windows 凭据库里**没有 github.com 条目**（`cmdkey /list` 为空），
+  非交互模式下 GCM 无法弹窗 → `could not read Username for 'https://github.com'`。
+  `gh` 未安装，所以上一轮记忆里"用 gh auth token 拼 URL"的办法现在用不了。
+- 只读镜像 `https://ghfast.top/` 可用（前缀式：`https://ghfast.top/https://github.com/...`），
+  适合 clone/fetch。**不要把凭据经第三方镜像推送。**
 - npm 源已在仓库 `.npmrc` 里配好 npmmirror，无需手动改
 
 ## git 提交身份（必须显式指定）
