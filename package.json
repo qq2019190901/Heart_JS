@@ -6,12 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && tsc -p tsconfig.electron.json && vite build",
-    "build:electron": "npm run build && npm run prep-staging && electron-builder --dir",
     "dist:electron": "node scripts/update-version.js && npm run build && npm run prep-staging && electron-builder",
-    "build:electron": "npm run build && npm run prep-staging && electron-builder --dir",
+    "build:electron": "node scripts/update-version.js && npm run build && npm run prep-staging && electron-builder --dir",
     "prep-staging": "rm -rf _staging && mkdir _staging && cp dist-electron/main.js _staging/ && cp -r dist _staging/ && cp package.json _staging/",
     "preview": "vite preview",
     "test": "vitest run",
+    "check": "node scripts/run-checks.mjs all",
+    "lint": "node scripts/run-checks.mjs lint",
     "apk": "node scripts/update-version.js && npm run build && npx capacitor sync android && cd android && ./gradlew clean assembleRelease && cp app/build/outputs/apk/release/app-release.apk ../release-apk.apk"
   },
   "dependencies": {
