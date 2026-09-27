@@ -56,6 +56,12 @@ function App() {
   const dealPerPlayerRef = useRef<Record<string, Card[]>>({});
 
   const aiTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /**
+   * Monotonic counter identifying the current AI turn. A scheduled AI timer
+   * captures the value at schedule time and bails out if it no longer matches,
+   * so a manual play or a newer turn can never be overwritten by a stale timer.
+   */
+  const aiTurnGenRef = useRef(0);
   const trickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const gameStateRef = useRef<GameState | null>(null);
   const resp = useResponsive();
@@ -473,26 +479,38 @@ function App() {
 
   useEffect(() => {
     if (mode !== 'lan' || !gameState || gameState.phase !== 'playing') return;
-    if (showPassUI) setShowPassUI(false);
     if (gameState.trickJustCompleted) return;
+    if (!lanIsHostRef.current) return; // Only the host drives AI turns
 
-    setWaitingForAi(true);
+    const decision = getAiPlayDecision(gameState);
+    if (!decision) return;
 
+    // Defer the "AI thinking" flag to the next macrotask: the timer is what
+    // actually produces the visible change (the AI card landing on the table),
+    // so flipping the flag inside the effect body would only add a synchronous
+    // extra render pass. The generation guard inside neutralizes stale timers.
+    const gen = ++aiTurnGenRef.current;
     aiTimeoutRef.current = setTimeout(() => {
+      // A newer turn (or a manual play) superseded this timer.
+      if (gen !== aiTurnGenRef.current) return;
       const latestState = gameStateRef.current;
-      if (!latestState || latestState.phase !== 'playing') { setWaitingForAi(false); return; }
+      if (!latestState || latestState.phase !== 'playing') return;
       const latestDecision = getAiPlayDecision(latestState);
-      if (!latestDecision) { setWaitingForAi(false); return; }
+      if (!latestDecision || latestDecision.playerId !== decision.playerId) return;
 
+      setWaitingForAi(true);
       const newState = playCard(latestState, latestDecision.playerId, latestDecision.cardId);
       setGameState(newState);
-      lanPeer.broadcast(newState);
+      if (lanIsHostRef.current) lanPeer.broadcast(newState);
       if (newState.phase === 'roundOver') setRoundOver(true);
       else if (newState.phase === 'gameOver') setGameOver(true);
-      setWaitingForAi(false);
-    }, latestDecision.delay ?? 500);
+    }, decision.delay);
 
     return () => { if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current); };
+    // `gameState` is read only to derive the AI decision; the primitive deps below
+    // are exactly what can change that decision, so re-running on every state
+    // object identity change would be wrong (and would restart the timer needlessly).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState?.currentPlayerId, gameState?.phase, gameState?.trickJustCompleted, mode]);
 
   // ========== LAN: Handle Incoming Card Plays from Clients ==========
@@ -543,28 +561,36 @@ function App() {
   useEffect(() => {
     if (mode !== 'single') return;
     if (!gameState || gameState.phase !== 'playing') return;
-    if (showPassUI) setShowPassUI(false);
     if (gameState.trickJustCompleted) return;
 
     const decision = getAiPlayDecision(gameState);
     if (!decision) return;
 
-    setWaitingForAi(true);
-
+    // Defer the "AI thinking" flag to the next macrotask: the timer is what
+    // actually produces the visible change (the AI card landing on the table),
+    // so flipping the flag inside the effect body would only add a synchronous
+    // extra render pass. The generation guard inside neutralizes stale timers.
+    const gen = ++aiTurnGenRef.current;
     aiTimeoutRef.current = setTimeout(() => {
+      // A newer turn (or a manual play) superseded this timer.
+      if (gen !== aiTurnGenRef.current) return;
       const latestState = gameStateRef.current;
-      if (!latestState || latestState.phase !== 'playing') { setWaitingForAi(false); return; }
+      if (!latestState || latestState.phase !== 'playing') return;
       const latestDecision = getAiPlayDecision(latestState);
-      if (!latestDecision || latestDecision.playerId !== decision.playerId) { setWaitingForAi(false); return; }
+      if (!latestDecision || latestDecision.playerId !== decision.playerId) return;
 
+      setWaitingForAi(true);
       const newState = playCard(latestState, latestDecision.playerId, latestDecision.cardId);
       setGameState(newState);
       if (newState.phase === 'roundOver') setRoundOver(true);
       else if (newState.phase === 'gameOver') setGameOver(true);
-      setWaitingForAi(false);
     }, decision.delay);
 
     return () => { if (aiTimeoutRef.current) clearTimeout(aiTimeoutRef.current); };
+    // `gameState` is read only to derive the AI decision; the primitive deps below
+    // are exactly what can change that decision, so re-running on every state
+    // object identity change would be wrong (and would restart the timer needlessly).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [gameState?.currentPlayerId, gameState?.phase, gameState?.trickJustCompleted, mode]);
 
   // ========== Common: Trick completion timer ==========
@@ -694,6 +720,11 @@ function App() {
     const hand = state.hands.get(humanId) || [];
     const hb = heartsAreBroken(state.hands, state.highestHeart);
     if (!canPlayCard(card, hand, state.currentTrick, hb)) return;
+
+    // Cancel any pending AI timer so it can't overwrite this manual play.
+    aiTurnGenRef.current++;
+    if (aiTimeoutRef.current) { clearTimeout(aiTimeoutRef.current); aiTimeoutRef.current = null; }
+    setWaitingForAi(false);
 
     const newState = playCard(state, humanId, card.id);
     setGameState(newState);
