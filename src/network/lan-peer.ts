@@ -406,6 +406,9 @@ export class LanPeerManager {
         conn.on('open', () => {
           this.hostConn = conn;
           console.log('[LAN-CLIENT] Connected to host!');
+          // Register the inbound handler for host → client traffic (game-state,
+          // player-list). Without this the client never leaves the lobby.
+          this.setupHostChannel(conn);
           // Notify app that the host is now connected (so App can show host player in list)
           this.emit('peer-connected', { id: hostId, name: 'Host' });
         });
