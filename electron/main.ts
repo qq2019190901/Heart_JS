@@ -2,7 +2,6 @@ import { app, BrowserWindow, ipcMain, Menu } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
 import http from 'http';
-import { createServer } from 'https';
 import { SimplePeerServer } from './peer-server';
 
 let peerHttpServer: http.Server | null = null;
@@ -28,28 +27,52 @@ function startPeerServer() {
   peerServer = new SimplePeerServer(httpServer, { path: '/peerjs' });
   peerHttpServer = httpServer;
 
-  const tryListen = (port: number): Promise<void> => {
+  /**
+   * Try to bind the signalling server to `port`.
+   * Resolves with the port actually bound, or throws if the port is occupied.
+   * Any listener registered by a previous failed attempt is removed first,
+   * otherwise stale 'error' handlers would fire on the next attempt.
+   */
+  const tryListen = (port: number): Promise<number> => {
     return new Promise((resolve, reject) => {
-      httpServer.once('error', (err: NodeJS.ErrnoException) => {
-        if (err.code === 'EADDRINUSE') {
-          console.warn(`[PeerJS] Port ${port} occupied, trying ${port + 1}`);
-          resolve();
-        } else {
-          reject(err);
-        }
-      });
-      httpServer.listen(port, '0.0.0.0', () => {
-        const addr = httpServer.address() as { port: number };
-        console.log(`[PeerJS] Listening on ws://0.0.0.0:${addr.port}/peerjs?key=peerjs`);
-        if (peerServer) peerServer.setPort(addr.port);
-        resolve();
-      });
+      const onError = (err: NodeJS.ErrnoException) => {
+        httpServer.removeListener('listening', onListening);
+        reject(err);
+      };
+      const onListening = () => {
+        httpServer.removeListener('error', onError);
+        const addr = httpServer.address() as { port: number } | null;
+        const actual = addr?.port ?? port;
+        console.log(`[PeerJS] Listening on ws://0.0.0.0:${actual}/peerjs?key=peerjs`);
+        if (peerServer) peerServer.setPort(actual);
+        resolve(actual);
+      };
+      httpServer.once('error', onError);
+      httpServer.once('listening', onListening);
+      httpServer.listen(port, '0.0.0.0');
     });
   };
 
-  tryListen(9000).catch(() => tryListen(9001)).catch((err) => {
-    console.error('[PeerJS] Failed to start server:', err);
-  });
+  // 9000 is preferred; fall back to 9001 only when it is genuinely occupied.
+  const PREFERRED_PORTS = [9000, 9001];
+
+  (async () => {
+    for (const port of PREFERRED_PORTS) {
+      try {
+        await tryListen(port);
+        return;
+      } catch (err) {
+        const code = (err as NodeJS.ErrnoException).code;
+        if (code === 'EADDRINUSE') {
+          console.warn(`[PeerJS] Port ${port} occupied, trying next...`);
+          continue;
+        }
+        console.error('[PeerJS] Failed to start server:', err);
+        return;
+      }
+    }
+    console.error(`[PeerJS] All ports occupied (${PREFERRED_PORTS.join(', ')}), signalling server unavailable`);
+  })();
 }
 
 function stopPeerServer() {
