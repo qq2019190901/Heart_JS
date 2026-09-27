@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Launch background referenced by AppTheme.NoActionBarLaunch in values/styles.xml.
+
+  This resource was missing from the repository: the original was almost
+  certainly a splash.png, and the repo's root .gitignore excludes *.png, so it
+  was never committed and a fresh clone could not link resources at all
+  ("resource drawable/splash not found").
+
+  An XML shape is used deliberately — it is not caught by the *.png rule, so it
+  stays in version control. Replace it with the real splash artwork if you have
+  one (and consider allowing that specific PNG through .gitignore).
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="#0D5E28" />
+</shape>
